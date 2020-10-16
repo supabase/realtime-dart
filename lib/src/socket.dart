@@ -9,47 +9,77 @@ import 'channel.dart';
 import 'lib/retry_timer.dart';
 
 class Socket {
-  Socket(
-    String endPoint, {
-    String transport,
-    Function encode,
-    Function decode,
-    int timeout,
-    int heartbeatIntervalMs,
-    Function reconnectAfterMs,
-    Function logger,
-    int longpollerTimeout,
-    Map params,
-  });
-
+  List<Channel> channels = [];
+  String endPoint = '';
+  Map<String, String> headers = {};
+  Map<String, String> params = {};
+  int timeout = constants.DEFAULT_TIMEOUT;
+  dynamic transport = IOWebSocketChannel;
+  int heartbeatIntervalMs = 30000;
+  int longpollerTimeout = 20000;
+  Timer heartbeatTimer;
+  String pendingHeartbeatRef;
+  int ref = 0;
+  RetryTimer reconnectTimer;
+  Function logger;
+  Function encode;
+  Function decode;
+  Function reconnectAfterMs;
+  IOWebSocketChannel conn;
+  List sendBuffer = [];
   Map<String, List<Function>> stateChangeCallbacks = {
     'open': [],
     'close': [],
     'error': [],
     'message': []
   };
-  List<Channel> channels = [];
-  List sendBuffer = [];
-  IOWebSocketChannel conn;
-  int ref = 0;
-  int timeout = constants.DEFAULT_TIMEOUT;
-  String transport = constants.TRANSPORTS.websocket;
-  Function defaultEncoder =
-      (dynamic payload, Function callback) => callback(json.encode(payload));
-  Function defaultDecoder =
-      (dynamic payload, Function callback) => callback(json.decode(payload));
-  int heartbeatIntervalMs = 30000;
-  Function encode;
-  Function decode;
-  Function reconnectAfterMs;
-  Function logger;
-  int longpollerTimeout;
-  Map params;
-  Map headers;
-  String endPoint;
-  Timer heartbeatTimer;
-  String pendingHeartbeatRef;
-  RetryTimer reconnectTimer;
+
+  /// Initializes the Socket
+  ///
+  /// `endPoint` The string WebSocket endpoint, ie, "ws://example.com/socket", "wss://example.com", "/socket" (inherited host & protocol)
+  /// `transport` The Websocket Transport, for example WebSocket.
+  /// `timeout` The default timeout in milliseconds to trigger push timeouts.
+  /// `params` The optional params to pass when connecting.
+  /// `headers` The optional headers to pass when connecting.
+  /// `heartbeatIntervalMs` The millisec interval to send a heartbeat message.
+  /// `logger` The optional function for specialized logging, ie: logger: (kind, msg, data) => { console.log(`${kind}: ${msg}`, data) }
+  /// `encode` The function to encode outgoing messages. Defaults to JSON: (payload, callback) => callback(JSON.stringify(payload))
+  /// `decode` The function to decode incoming messages. Defaults to JSON: (payload, callback) => callback(JSON.parse(payload))
+  /// `longpollerTimeout` The maximum timeout of a long poll AJAX request. Defaults to 20s (double the server long poll timer).
+  /// `reconnectAfterMs` he optional function that returns the millsec reconnect interval. Defaults to stepped backoff off.
+  Socket(
+    String endPoint, {
+    dynamic transport = IOWebSocketChannel,
+    Function encode,
+    Function decode,
+    int timeout = constants.DEFAULT_TIMEOUT,
+    int heartbeatIntervalMs = 30000,
+    int longpollerTimeout = 20000,
+    Function reconnectAfterMs,
+    Function logger,
+    Map<String, String> params = const {},
+    Map<String, String> headers = const {},
+  }) {
+    this.endPoint = '${endPoint}/${constants.TRANSPORTS.websocket}';
+    this.params = params;
+    this.headers = headers;
+    this.timeout = timeout;
+    this.logger = logger;
+    this.transport = transport;
+    this.heartbeatIntervalMs = heartbeatIntervalMs;
+    this.longpollerTimeout = longpollerTimeout;
+    this.reconnectAfterMs = reconnectAfterMs ??
+        (int tries) {
+          return [1000, 5000, 10000][tries - 1] ?? 10000;
+        };
+    this.encode = encode ??
+        (dynamic payload, Function callback) => callback(json.encode(payload));
+    this.decode = decode ??
+        (dynamic payload, Function callback) => callback(json.decode(payload));
+
+    reconnectTimer = RetryTimer(
+        () => {disconnect(callback: () => connect())}, this.reconnectAfterMs);
+  }
 
   String endPointURL() {
     var params = Map.from(this.params);
@@ -84,6 +114,16 @@ class Socket {
     if (conn != null) return;
 
     conn = IOWebSocketChannel.connect(endPointURL(), headers: headers);
+    // TODO:
+    // https://www.didierboelens.com/2018/06/web-sockets-build-a-real-time-game/
+    // https://github.com/dart-lang/web_socket_channel/issues/16
+    // if (conn != null) {
+    //   // this.conn.timeout = this.longpollerTimeout // TYPE ERROR
+    //   conn.onopen = () => this.onConnOpen()
+    //   conn.onerror = (error) => this.onConnError(error)
+    //   conn.onmessage = (event) => this.onConnMessage(event)
+    //   conn.onclose = (event) => this.onConnClose(event)
+    // }
   }
 
   /// Logs the message. Override `this.logger` for specialized logging. noops by default
@@ -94,8 +134,7 @@ class Socket {
   /// Registers callbacks for connection state change events
   ///
   /// Examples
-  ///
-  ///    socket.onError(function(error){ alert("An error occurred") })
+  /// socket.onError(function(error){ alert("An error occurred") })
   ///
   void onOpen(callback) {
     stateChangeCallbacks['open'].add(callback);
@@ -115,18 +154,19 @@ class Socket {
 
   void onConnOpen() {
     log('transport', 'connected to ${endPointURL()}');
-    // flushSendBuffer();
+    flushSendBuffer();
     reconnectTimer.reset();
-    // if(!this.conn.skipHeartbeat){
-    //   clearInterval(this.heartbeatTimer);
-    //   this.heartbeatTimer = setInterval(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
+    // if(!this.conn.skipHeartbeat){ // Skip heartbeat doesn't exist on dart:io Websocket
+    heartbeatTimer.cancel();
+    heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs),
+        (Timer t) => sendHeartbeat());
     // }
     stateChangeCallbacks['open'].forEach((callback) => callback());
   }
 
   void onConnClose(event) {
     log('transport', 'close', event);
-    // this.triggerChanError();
+    triggerChanError();
     heartbeatTimer.cancel();
     reconnectTimer.scheduleTimeout();
     stateChangeCallbacks['close'].forEach((callback) => callback(event));
@@ -134,7 +174,7 @@ class Socket {
 
   void onConnError(error) {
     log('transport', error);
-    // this.triggerChanError();
+    triggerChanError();
     stateChangeCallbacks['error'].forEach((callback) => callback(error));
   }
 
@@ -143,6 +183,7 @@ class Socket {
         .forEach((channel) => channel.trigger(constants.CHANNEL_EVENTS.error));
   }
 
+  /// TODO: dart:io Websocket doesnt have connection State
   String connectionState() {
     // switch(conn && conn.readyState){
     //   case SOCKET_STATES.connecting: return "connecting"
@@ -158,7 +199,7 @@ class Socket {
   }
 
   void remove(Channel channel) {
-    // channels = channels.where((c) => c.joinRef() !== channel.joinRef())
+    channels = channels.where((c) => c.joinRef() != channel.joinRef());
   }
 
   Channel channel(String topic, {Map chanParams = const {}}) {

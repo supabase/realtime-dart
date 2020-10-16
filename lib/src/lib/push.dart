@@ -5,12 +5,7 @@ import 'constants.dart' as constants;
 
 typedef Callback = void Function(dynamic response);
 
-/// Initializes the Push
-///
-/// `channel` The Channel
-/// `event` The event, for example `"phx_join"`
-/// `payload` The payload, for example `{user_id: 123}`
-/// `timeout` The push timeout in milliseconds
+/// Push event obj
 class Push {
   Channel channel;
   String event;
@@ -23,6 +18,12 @@ class Push {
   List recHooks = [];
   bool sent;
 
+  /// Initializes the Push
+  ///
+  /// `channel` The Channel
+  /// `event` The event, for example `"phx_join"`
+  /// `payload` The payload, for example `{user_id: 123}`
+  /// `timeout` The push timeout in milliseconds
   Push({
     this.channel,
     this.event,

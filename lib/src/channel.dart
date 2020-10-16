@@ -6,13 +6,14 @@ import 'socket.dart';
 typedef Callback = void Function(dynamic payload, {String ref});
 
 class Channel {
-  Channel(this.topic, this.params, this.socket);
-
   String state = constants.CHANNEL_STATES.closed;
   String topic;
   Map params;
   Socket socket;
   List bindings;
+  Push joinPush;
+
+  Channel(this.topic, this.params, this.socket);
 
   bool isMember(topic) {
     return this.topic == topic;
@@ -40,5 +41,9 @@ class Channel {
 
   String replyEventName(String ref) {
     return 'chan_reply_${ref}';
+  }
+
+  String joinRef() {
+    return joinPush.ref;
   }
 }

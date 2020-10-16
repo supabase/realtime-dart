@@ -25,7 +25,7 @@ class RetryTimer {
   Timer _timer;
   int _tries;
 
-  RetryTimer({this.callback, this.timerCalc});
+  RetryTimer(this.callback, this.timerCalc);
 
   /// Cancels any previous timer and reset tries
   void reset() {
