@@ -24,12 +24,8 @@ class Push {
   /// `event` The event, for example `"phx_join"`
   /// `payload` The payload, for example `{user_id: 123}`
   /// `timeout` The push timeout in milliseconds
-  Push({
-    this.channel,
-    this.event,
-    this.payload = const {},
-    this.timeout = constants.DEFAULT_TIMEOUT,
-  });
+  Push(this.channel, this.event,
+      {this.payload = const {}, this.timeout = constants.DEFAULT_TIMEOUT});
 
   void resend(int timeout) {
     this.timeout = timeout;
@@ -44,7 +40,7 @@ class Push {
   void send() {
     if (_hasReceived('timeout')) return;
 
-    _startTimeout();
+    startTimeout();
     sent = true;
     channel.socket.push(
       topic: channel.topic,
@@ -63,7 +59,7 @@ class Push {
     return this;
   }
 
-  void _startTimeout() {
+  void startTimeout() {
     if (timeoutTimer == null) return;
 
     ref = channel.socket.makeRef();
@@ -77,11 +73,11 @@ class Push {
     });
 
     timeoutTimer = Timer(Duration(milliseconds: timeout), () {
-      _trigger('timeout', {});
+      trigger('timeout', {});
     });
   }
 
-  void _trigger(status, response) {
+  void trigger(status, response) {
     if (refEvent != null) {
       channel.trigger(refEvent, payload: {
         'status': status,

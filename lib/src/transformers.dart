@@ -80,7 +80,8 @@ Map convertChangeData(List<Column> columns, Map<String, String> records,
 /// ```
 dynamic convertColumn(String columnName, List<Column> columns,
     Map<String, String> records, List<String> skipTypes) {
-  var column = columns.firstWhere((x) => x.name == columnName);
+  var column =
+      columns.firstWhere((x) => x.name == columnName, orElse: () => null);
   if (column == null || skipTypes.contains(column.type)) {
     return noop(records[columnName]);
   } else {

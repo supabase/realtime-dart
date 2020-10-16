@@ -203,7 +203,7 @@ class Socket {
   }
 
   Channel channel(String topic, {Map chanParams = const {}}) {
-    var chan = Channel(topic, chanParams, this);
+    var chan = Channel(topic, this, params: chanParams);
     channels.add(chan);
     return chan;
   }
