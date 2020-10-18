@@ -33,6 +33,7 @@ class Socket {
     'error': [],
     'message': []
   };
+  int connState;
 
   /// Initializes the Socket
   ///
@@ -99,7 +100,7 @@ class Socket {
   }
 
   void disconnect({Function callback, int code, String reason}) {
-    if (conn != null) {
+    if (conn != null || conn.sink != null) {
       if (code != null) {
         conn.sink.close(code, reason ?? '');
       } else {
@@ -113,17 +114,29 @@ class Socket {
   void connect() {
     if (conn != null) return;
 
-    conn = IOWebSocketChannel.connect(endPointURL(), headers: headers);
-    // TODO:
-    // https://www.didierboelens.com/2018/06/web-sockets-build-a-real-time-game/
-    // https://github.com/dart-lang/web_socket_channel/issues/16
-    // if (conn != null) {
-    //   // this.conn.timeout = this.longpollerTimeout // TYPE ERROR
-    //   conn.onopen = () => this.onConnOpen()
-    //   conn.onerror = (error) => this.onConnError(error)
-    //   conn.onmessage = (event) => this.onConnMessage(event)
-    //   conn.onclose = (event) => this.onConnClose(event)
-    // }
+    try {
+      connState = constants.SOCKET_STATES.connecting;
+      conn = IOWebSocketChannel.connect(endPointURL(), headers: headers);
+      if (conn != null) {
+        connState = constants.SOCKET_STATES.open;
+        onConnOpen();
+        conn.stream.timeout(Duration(milliseconds: longpollerTimeout));
+        conn.stream.listen((message) {
+          // handling of the incoming messages
+          onConnMessage(message);
+        }, onError: (error) {
+          // error handling
+          onConnError(error);
+        }, onDone: () {
+          // communication has been closed
+          connState = constants.SOCKET_STATES.closed;
+          onConnClose('');
+        });
+      }
+    } catch (e) {
+      /// General error handling
+      onConnError(e);
+    }
   }
 
   /// Logs the message. Override `this.logger` for specialized logging. noops by default
@@ -183,14 +196,17 @@ class Socket {
         .forEach((channel) => channel.trigger(constants.CHANNEL_EVENTS.error));
   }
 
-  /// TODO: dart:io Websocket doesnt have connection State
   String connectionState() {
-    // switch(conn && conn.readyState){
-    //   case SOCKET_STATES.connecting: return "connecting"
-    //   case SOCKET_STATES.open:       return "open"
-    //   case SOCKET_STATES.closing:    return "closing"
-    //   default:                       return "closed"
-    // }
+    switch (connState) {
+      case 0:
+        return 'connecting';
+      case 1:
+        return 'open';
+      case 2:
+        return 'closing';
+      case 3:
+        return 'closed';
+    }
     return '';
   }
 
