@@ -4,6 +4,8 @@ Listens to changes in a PostgreSQL Database and via websockets.
 
 This is for usage with Supabase [Realtime](https://github.com/supabase/realtime) server.
 
+Pre-release verion! This repo is still under heavy development and the documentation is evolving. You're welcome to try it, but expect some breaking changes.
+
 ## Usage
 
 ### Creating a Socket connection
