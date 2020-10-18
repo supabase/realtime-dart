@@ -13,7 +13,7 @@ Pre-release verion! This repo is still under heavy development and the documenta
 You can set up one connection to be used across the whole app.
 
 ```dart
-import 'package:realtime/client.dart';
+import 'package:realtime/realtime.dart';
 
 var socket = Socket(REALTIME_URL);
 socket.connect();

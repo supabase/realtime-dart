@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:realtime/client.dart';
+import 'package:realtime/realtime.dart';
 
 import 'package:web_socket_channel/io.dart';
 
