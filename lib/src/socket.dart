@@ -21,7 +21,7 @@ class Socket {
   String pendingHeartbeatRef;
   int ref = 0;
   RetryTimer reconnectTimer;
-  Function logger;
+  Function logger = () => {};
   Function encode;
   Function decode;
   Function reconnectAfterMs;
@@ -62,13 +62,28 @@ class Socket {
     Map<String, String> headers = const {},
   }) {
     this.endPoint = '${endPoint}/${constants.TRANSPORTS.websocket}';
-    this.params = params;
-    this.headers = headers;
-    this.timeout = timeout;
-    this.logger = logger;
-    this.transport = transport;
-    this.heartbeatIntervalMs = heartbeatIntervalMs;
-    this.longpollerTimeout = longpollerTimeout;
+    if (params != null) {
+      this.params = params;
+    }
+    if (headers != null) {
+      this.headers = headers;
+    }
+    if (timeout != null) {
+      this.timeout = timeout;
+    }
+    if (logger != null) {
+      this.logger = logger;
+    }
+    if (transport != null) {
+      this.transport = transport;
+    }
+    if (heartbeatIntervalMs != null) {
+      this.heartbeatIntervalMs = heartbeatIntervalMs;
+    }
+    if (longpollerTimeout != null) {
+      this.longpollerTimeout = longpollerTimeout;
+    }
+
     this.reconnectAfterMs = reconnectAfterMs ??
         (int tries) {
           return [1000, 5000, 10000][tries - 1] ?? 10000;
