@@ -21,7 +21,7 @@ class Socket {
   String pendingHeartbeatRef;
   int ref = 0;
   RetryTimer reconnectTimer;
-  Function logger = () => {};
+  Function logger;
   Function encode;
   Function decode;
   Function reconnectAfterMs;
@@ -154,9 +154,9 @@ class Socket {
     }
   }
 
-  /// Logs the message. Override `this.logger` for specialized logging. noops by default
+  /// Logs the message. Override `this.logger` for specialized logging.
   void log([String kind, String msg, dynamic data]) {
-    logger(kind, msg, data);
+    if (logger != null) logger(kind, msg, data);
   }
 
   /// Registers callbacks for connection state change events
@@ -184,24 +184,22 @@ class Socket {
     log('transport', 'connected to ${endPointURL()}');
     flushSendBuffer();
     reconnectTimer.reset();
-    // if(!this.conn.skipHeartbeat){ // Skip heartbeat doesn't exist on dart:io Websocket
-    heartbeatTimer.cancel();
+    if (heartbeatTimer != null) heartbeatTimer.cancel();
     heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs),
         (Timer t) => sendHeartbeat());
-    // }
     stateChangeCallbacks['open'].forEach((callback) => callback());
   }
 
   void onConnClose(event) {
     log('transport', 'close', event);
     triggerChanError();
-    heartbeatTimer.cancel();
+    if (heartbeatTimer != null) heartbeatTimer.cancel();
     reconnectTimer.scheduleTimeout();
     stateChangeCallbacks['close'].forEach((callback) => callback(event));
   }
 
   void onConnError(error) {
-    log('transport', error);
+    log('transport', error.toString());
     triggerChanError();
     stateChangeCallbacks['error'].forEach((callback) => callback(error));
   }

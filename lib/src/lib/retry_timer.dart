@@ -30,12 +30,12 @@ class RetryTimer {
   /// Cancels any previous timer and reset tries
   void reset() {
     _tries = 0;
-    _timer.cancel();
+    if (_timer != null) _timer.cancel();
   }
 
   /// Cancels any previous scheduleTimeout and schedules callback
   void scheduleTimeout() {
-    _timer.cancel();
+    if (_timer != null) _timer.cancel();
 
     _timer = Timer(Duration(milliseconds: timerCalc(_tries + 1)), () {
       _tries = _tries + 1;
