@@ -30,7 +30,7 @@ class Push {
   void resend(int timeout) {
     this.timeout = timeout;
     cancelRefEvent();
-    ref = null;
+    ref = '';
     refEvent = null;
     receivedResp = null;
     sent = false;
@@ -105,6 +105,6 @@ class Push {
   }
 
   bool _hasReceived(String status) {
-    return receivedResp && receivedResp.status == status;
+    return receivedResp != null && receivedResp.status == status;
   }
 }
