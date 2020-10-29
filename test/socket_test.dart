@@ -4,7 +4,7 @@ import 'package:realtime/realtime.dart';
 import 'package:web_socket_channel/io.dart';
 
 void main() {
-  test('basic select table', () async {
+  test('sets defaults', () async {
     var socket = Socket('wss://example.com/socket');
     expect(socket.channels.length, 0);
     expect(socket.sendBuffer.length, 0);
