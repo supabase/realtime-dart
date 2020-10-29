@@ -185,7 +185,7 @@ class Channel {
       return;
     }
     var handledPayload = onMessage(event, payload, ref: ref);
-    if (payload != null && !handledPayload) {
+    if (payload != null && handledPayload == null) {
       throw 'channel onMessage callbacks must return the payload, modified or unmodified';
     }
 

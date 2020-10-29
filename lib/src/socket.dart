@@ -115,7 +115,8 @@ class Socket {
   }
 
   void disconnect({Function callback, int code, String reason}) {
-    if (conn != null || conn.sink != null) {
+    if (conn != null || conn?.sink != null) {
+      connState = constants.SOCKET_STATES.disconnected;
       if (code != null) {
         conn.sink.close(code, reason ?? '');
       } else {
@@ -144,8 +145,10 @@ class Socket {
           onConnError(error);
         }, onDone: () {
           // communication has been closed
-          connState = constants.SOCKET_STATES.closed;
-          onConnClose('');
+          if (connState != constants.SOCKET_STATES.disconnected) {
+            connState = constants.SOCKET_STATES.closed;
+            onConnClose('');
+          }
         });
       }
     } catch (e) {
@@ -239,7 +242,10 @@ class Socket {
 
   void push({String topic, String event, dynamic payload, String ref}) {
     var callback = () => {
-          encode({'topic': topic}, (result) {
+          encode(
+              {'topic': topic, 'event': event, 'payload': payload, 'ref': ref},
+              (result) {
+            // print('send message ${result}');
             conn.sink.add(result);
           })
         };
@@ -292,18 +298,18 @@ class Socket {
   }
 
   void onConnMessage(rawMessage) {
-    decode(rawMessage.data, (msg) {
+    decode(rawMessage, (msg) {
       var topic = msg['topic'];
       var event = msg['event'];
       var payload = msg['payload'];
       var ref = msg['ref'];
-      if (ref && ref == pendingHeartbeatRef) {
+      if (ref != null && ref == pendingHeartbeatRef) {
         pendingHeartbeatRef = null;
       }
 
       log(
           'receive',
-          "${payload.status ?? ''} ${topic} ${event} ${ref ? '(' + ref + ')' : ''}",
+          "${payload['status'] ?? ''} ${topic} ${event} ${ref != null ? '(' + ref + ')' : ''}",
           payload);
 
       channels.where((channel) => channel.isMember(topic)).forEach(

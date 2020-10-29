@@ -7,6 +7,7 @@ class SOCKET_STATES {
   static int get open => 1;
   static int get closing => 2;
   static int get closed => 3;
+  static int get disconnected => 4;
 }
 
 class CHANNEL_STATES {
