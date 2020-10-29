@@ -12,7 +12,7 @@ class Channel {
   Socket socket;
   RetryTimer rejoinTimer;
   List<Push> pushBuffer = [];
-  List bindings;
+  List bindings = [];
   bool joinedOnce;
   Push joinPush;
   int timeout;
@@ -72,7 +72,7 @@ class Channel {
   }
 
   Push subscribe([int timeout]) {
-    if (joinedOnce) {
+    if (joinedOnce == true) {
       throw "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance";
     } else {
       joinedOnce = true;
@@ -185,7 +185,7 @@ class Channel {
       return;
     }
     var handledPayload = onMessage(event, payload, ref: ref);
-    if (payload && !handledPayload) {
+    if (payload != null && !handledPayload) {
       throw 'channel onMessage callbacks must return the payload, modified or unmodified';
     }
 

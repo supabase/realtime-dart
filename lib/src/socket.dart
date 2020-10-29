@@ -164,19 +164,19 @@ class Socket {
   /// Examples
   /// socket.onError(function(error){ alert("An error occurred") })
   ///
-  void onOpen(callback) {
+  void onOpen(Function callback) {
     stateChangeCallbacks['open'].add(callback);
   }
 
-  void onClose(callback) {
+  void onClose(Function(dynamic) callback) {
     stateChangeCallbacks['close'].add(callback);
   }
 
-  void onError(callback) {
+  void onError(Function(dynamic) callback) {
     stateChangeCallbacks['error'].add(callback);
   }
 
-  void onMessage(callback) {
+  void onMessage(Function(dynamic) callback) {
     stateChangeCallbacks['message'].add(callback);
   }
 
@@ -239,7 +239,9 @@ class Socket {
 
   void push({String topic, String event, dynamic payload, String ref}) {
     var callback = () => {
-          encode({'topic': topic}, (result) => {conn.sink.add(result)})
+          encode({'topic': topic}, (result) {
+            conn.sink.add(result);
+          })
         };
 
     log('push', '${topic} ${event} (${ref})', payload);
