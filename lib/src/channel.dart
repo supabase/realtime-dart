@@ -1,4 +1,4 @@
-import 'lib/constants.dart' as constants;
+import 'lib/constants.dart';
 import 'lib/push.dart';
 import 'lib/retry_timer.dart';
 import 'socket.dart';
@@ -6,112 +6,102 @@ import 'socket.dart';
 typedef Callback = void Function(dynamic payload, {String ref});
 
 class Channel {
-  String state = constants.CHANNEL_STATES.closed;
-  String topic;
-  Map params;
-  Socket socket;
-  RetryTimer rejoinTimer;
-  List<Push> pushBuffer = [];
-  List bindings = [];
-  bool joinedOnce;
-  Push joinPush;
-  int timeout;
+  ChannelStates _state = ChannelStates.closed;
+  final String topic;
+  final Map<dynamic, dynamic> params;
+  final Socket socket;
+  RetryTimer _rejoinTimer;
+  List<Push> _pushBuffer = [];
+  List<Binding> _bindings = [];
+  bool _joinedOnce;
+  Push _joinPush;
+  final Duration _timeout;
 
-  Channel(String topic, Socket socket, {Map params = const {}}) {
-    this.topic = topic;
-    this.socket = socket;
-    this.params = params;
-
-    timeout = this.socket.timeout;
-    joinPush = Push(this, constants.CHANNEL_EVENTS.join,
-        payload: this.params, timeout: timeout);
-    rejoinTimer =
-        RetryTimer(() => rejoinUntilConnected(), this.socket.reconnectAfterMs);
-
-    joinPush.receive('ok', (response) {
-      state = constants.CHANNEL_STATES.joined;
-      rejoinTimer.reset();
-      pushBuffer.forEach((pushEvent) => pushEvent.send());
-      pushBuffer = [];
+  Channel(this.topic, this.socket, {this.params = const {}}) : _timeout = socket.timeout {
+    _joinPush = Push(this, ChannelEvents.join, params, _timeout);
+    _rejoinTimer = RetryTimer(() => rejoinUntilConnected(), socket.reconnectAfterMs);
+    _joinPush.receive('ok', (response) {
+      _state = ChannelStates.joined;
+      _rejoinTimer.reset();
+      _pushBuffer.forEach((pushEvent) => pushEvent.send());
+      _pushBuffer = [];
     });
 
     onClose(() {
-      rejoinTimer.reset();
-      this.socket.log('channel', 'close ${this.topic} ${joinRef()}');
-      state = constants.CHANNEL_STATES.closed;
-      this.socket.remove(this);
+      _rejoinTimer.reset();
+      socket.log('channel', 'close $topic ${joinRef()}');
+      _state = ChannelStates.closed;
+      socket.remove(this);
     });
 
     onError((String reason) {
       if (isLeaving() || isClosed()) {
         return;
       }
-      this.socket.log('channel', 'error ${this.topic}', reason);
-      state = constants.CHANNEL_STATES.errored;
-      rejoinTimer.scheduleTimeout();
+      socket.log('channel', 'error $topic', reason);
+      _state = ChannelStates.errored;
+      _rejoinTimer.scheduleTimeout();
     });
 
-    joinPush.receive('timeout', (response) {
+    _joinPush.receive('timeout', (response) {
       if (!isJoining()) {
         return;
       }
-      this.socket.log('channel', 'timeout ${this.topic}', joinPush.timeout);
-      state = constants.CHANNEL_STATES.errored;
-      rejoinTimer.scheduleTimeout();
+      socket.log('channel', 'timeout $topic', _joinPush.timeout);
+      _state = ChannelStates.errored;
+      _rejoinTimer.scheduleTimeout();
     });
 
-    on(constants.CHANNEL_EVENTS.reply,
-        (payload, {ref}) => trigger(replyEventName(ref), payload: payload));
+    on(ChannelEvents.reply.eventName(), (payload, {ref}) => trigger(replyEventName(ref), payload: payload));
   }
 
   void rejoinUntilConnected() {
-    rejoinTimer.scheduleTimeout();
+    _rejoinTimer.scheduleTimeout();
     if (socket.isConnected()) {
       rejoin();
     }
   }
 
-  Push subscribe([int timeout]) {
-    if (joinedOnce == true) {
+  Push subscribe({Duration timeout}) {
+    if (_joinedOnce == true) {
       throw "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance";
     } else {
-      joinedOnce = true;
-      rejoin(timeout ?? this.timeout);
-      return joinPush;
+      _joinedOnce = true;
+      rejoin(timeout ?? _timeout);
+      return _joinPush;
     }
   }
 
   void onClose(Function callback) {
-    on(constants.CHANNEL_EVENTS.close, (reason, {ref}) => callback());
+    on(ChannelEvents.close.eventName(), (reason, {ref}) => callback());
   }
 
   void onError(Function(String) callback) {
-    on(constants.CHANNEL_EVENTS.error, (reason, {ref}) => callback(reason));
+    on(ChannelEvents.error.eventName(), (reason, {ref}) => callback(reason as String));
   }
 
   void on(String event, Callback callback) {
-    bindings.add({'event': event, 'callback': callback});
+    _bindings.add(Binding(event, callback));
   }
 
   void off(String event) {
-    bindings = bindings.where((bind) => bind.event != event);
+    _bindings = _bindings.where((bind) => bind.event != event).toList();
   }
 
   bool canPush() {
     return socket.isConnected() && isJoined();
   }
 
-  Push push(constants.CHANNEL_STATES event, dynamic payload, {int timeout}) {
-    if (!joinedOnce) {
-      throw "tried to push '${event}' to '${topic}' before joining. Use channel.subscribe() before pushing events";
+  Push push(ChannelEvents event, Map<String, String> payload, {Duration timeout}) {
+    if (!_joinedOnce) {
+      throw "tried to push '${event.eventName()}' to '$topic' before joining. Use channel.subscribe() before pushing events";
     }
-    var pushEvent = Push(this, event.toString(),
-        payload: payload, timeout: timeout ?? this.timeout);
+    final pushEvent = Push(this, event, payload, timeout ?? _timeout);
     if (canPush()) {
       pushEvent.send();
     } else {
       pushEvent.startTimeout();
-      pushBuffer.add(pushEvent);
+      _pushBuffer.add(pushEvent);
     }
 
     return pushEvent;
@@ -126,17 +116,14 @@ class Channel {
   /// ```dart
   /// channel.unsubscribe().receive("ok", () => alert("left!") )
   /// ```
-  Push unsubscribe([int timeout]) {
-    state = constants.CHANNEL_STATES.leaving;
-    var onClose = () {
-      socket.log('channel', 'leave ${topic}');
-      trigger(constants.CHANNEL_EVENTS.close, payload: 'leave', ref: joinRef());
+  Push unsubscribe({Duration timeout}) {
+    _state = ChannelStates.leaving;
+    final onClose = () {
+      socket.log('channel', 'leave $topic');
+      trigger(ChannelEvents.close.eventName(), payload: 'leave', ref: joinRef());
     };
-    var leavePush = Push(this, constants.CHANNEL_EVENTS.leave,
-        timeout: timeout ?? this.timeout);
-    leavePush
-        .receive('ok', (_) => onClose())
-        .receive('timeout', (_) => onClose());
+    final leavePush = Push(this, ChannelEvents.leave, {}, timeout ?? _timeout);
+    leavePush.receive('ok', (_) => onClose()).receive('timeout', (_) => onClose());
     leavePush.send();
     if (!canPush()) {
       leavePush.trigger('ok', {});
@@ -153,68 +140,70 @@ class Channel {
     return payload;
   }
 
-  bool isMember(topic) {
+  bool isMember(String topic) {
     return this.topic == topic;
   }
 
   String joinRef() {
-    return joinPush.ref;
+    return _joinPush.ref;
   }
 
-  void sendJoin(int timeout) {
-    state = constants.CHANNEL_STATES.joining;
-    joinPush.resend(timeout);
+  void sendJoin(Duration timeout) {
+    _state = ChannelStates.joining;
+    _joinPush.resend(timeout);
   }
 
-  void rejoin([int timeout]) {
+  void rejoin([Duration timeout]) {
     if (isLeaving()) {
       return;
     }
-    sendJoin(timeout ?? this.timeout);
+    sendJoin(timeout ?? _timeout);
   }
 
   void trigger(String event, {dynamic payload, String ref}) {
-    var events = [
-      constants.CHANNEL_EVENTS.close,
-      constants.CHANNEL_EVENTS.error,
-      constants.CHANNEL_EVENTS.leave,
-      constants.CHANNEL_EVENTS.join
-    ];
+    final events = [ChannelEvents.close, ChannelEvents.error, ChannelEvents.leave, ChannelEvents.join]
+        .map((e) => e.eventName())
+        .toSet();
 
     if (ref != null && events.contains(event) && ref != joinRef()) {
       return;
     }
-    var handledPayload = onMessage(event, payload, ref: ref);
+    final handledPayload = onMessage(event, payload, ref: ref);
     if (payload != null && handledPayload == null) {
       throw 'channel onMessage callbacks must return the payload, modified or unmodified';
     }
 
-    bindings
-        .where((bind) => bind.event == event)
-        .map((bind) => bind.callback(handledPayload, ref));
+    _bindings.where((bind) => bind.event == event).map((bind) => bind.callback(handledPayload, ref: ref));
   }
 
   String replyEventName(String ref) {
-    return 'chan_reply_${ref}';
+    return 'chan_reply_$ref';
   }
 
   bool isClosed() {
-    return state == constants.CHANNEL_STATES.closed;
+    return _state == ChannelStates.closed;
   }
 
   bool isErrored() {
-    return state == constants.CHANNEL_STATES.errored;
+    return _state == ChannelStates.errored;
   }
 
   bool isJoined() {
-    return state == constants.CHANNEL_STATES.joined;
+    return _state == ChannelStates.joined;
   }
 
   bool isJoining() {
-    return state == constants.CHANNEL_STATES.joining;
+    return _state == ChannelStates.joining;
   }
 
   bool isLeaving() {
-    return state == constants.CHANNEL_STATES.leaving;
+    return _state == ChannelStates.leaving;
   }
+}
+
+class Binding {
+  String event;
+  Callback callback;
+
+  Binding(this.event, this.callback);
 }

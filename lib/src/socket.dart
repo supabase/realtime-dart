@@ -3,37 +3,38 @@ import 'dart:convert';
 import 'dart:core';
 
 import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
-import 'lib/constants.dart' as constants;
 import 'channel.dart';
+import 'lib/constants.dart';
 import 'lib/retry_timer.dart';
+
+typedef Logger = void Function(String kind, String msg, dynamic data);
+typedef Encoder = void Function(dynamic payload, void Function(String result) callback);
+typedef Decoder = void Function(String payload, void Function(dynamic result) callback);
+typedef WebSocketChannelProvider = WebSocketChannel Function(String url, Map<String, String> headers);
 
 class Socket {
   List<Channel> channels = [];
-  String endPoint = '';
-  Map<String, String> headers = {};
-  Map<String, String> params = {};
-  int timeout = constants.DEFAULT_TIMEOUT;
-  dynamic transport = IOWebSocketChannel;
+  final String endPoint;
+  final Map<String, String> headers;
+  final Map<String, String> params;
+  final Duration timeout;
+  final WebSocketChannelProvider transport;
   int heartbeatIntervalMs = 30000;
   int longpollerTimeout = 20000;
   Timer heartbeatTimer;
   String pendingHeartbeatRef;
   int ref = 0;
   RetryTimer reconnectTimer;
-  Function logger;
-  Function encode;
-  Function decode;
-  Function reconnectAfterMs;
-  IOWebSocketChannel conn;
+  Logger logger;
+  Encoder encode;
+  Decoder decode;
+  int Function(int) reconnectAfterMs;
+  WebSocketChannel conn;
   List sendBuffer = [];
-  Map<String, List<Function>> stateChangeCallbacks = {
-    'open': [],
-    'close': [],
-    'error': [],
-    'message': []
-  };
-  int connState;
+  Map<String, List<Function>> stateChangeCallbacks = {'open': [], 'close': [], 'error': [], 'message': []};
+  SocketStates connState;
 
   /// Initializes the Socket
   ///
@@ -43,71 +44,46 @@ class Socket {
   /// `params` The optional params to pass when connecting.
   /// `headers` The optional headers to pass when connecting.
   /// `heartbeatIntervalMs` The millisec interval to send a heartbeat message.
-  /// `logger` The optional function for specialized logging, ie: logger: (kind, msg, data) => { console.log(`${kind}: ${msg}`, data) }
+  /// `logger` The optional function for specialized logging, ie: logger: (kind, msg, data) => { console.log(`$kind: $msg`, data) }
   /// `encode` The function to encode outgoing messages. Defaults to JSON: (payload, callback) => callback(JSON.stringify(payload))
   /// `decode` The function to decode incoming messages. Defaults to JSON: (payload, callback) => callback(JSON.parse(payload))
   /// `longpollerTimeout` The maximum timeout of a long poll AJAX request. Defaults to 20s (double the server long poll timer).
   /// `reconnectAfterMs` he optional function that returns the millsec reconnect interval. Defaults to stepped backoff off.
   Socket(
     String endPoint, {
-    dynamic transport = IOWebSocketChannel,
-    Function encode,
-    Function decode,
-    int timeout = constants.DEFAULT_TIMEOUT,
-    int heartbeatIntervalMs = 30000,
-    int longpollerTimeout = 20000,
-    Function reconnectAfterMs,
-    Function logger,
-    Map<String, String> params = const {},
-    Map<String, String> headers = const {},
-  }) {
-    this.endPoint = '${endPoint}/${constants.TRANSPORTS.websocket}';
-    if (params != null) {
-      this.params = params;
-    }
-    if (headers != null) {
-      this.headers = headers;
-    }
-    if (timeout != null) {
-      this.timeout = timeout;
-    }
-    if (logger != null) {
-      this.logger = logger;
-    }
-    if (transport != null) {
-      this.transport = transport;
-    }
-    if (heartbeatIntervalMs != null) {
-      this.heartbeatIntervalMs = heartbeatIntervalMs;
-    }
-    if (longpollerTimeout != null) {
-      this.longpollerTimeout = longpollerTimeout;
-    }
-
+    WebSocketChannelProvider transport,
+    this.encode,
+    this.decode,
+    this.timeout = Constants.DEFAULT_TIMEOUT,
+    this.heartbeatIntervalMs = 30000,
+    this.longpollerTimeout = 20000,
+    int Function(int) reconnectAfterMs,
+    this.logger,
+    this.params = const {},
+    this.headers = const {},
+  })  : endPoint = '$endPoint/${Transports.websocket}',
+        transport = (transport ?? (url, headers) => IOWebSocketChannel.connect(url, headers: headers)) {
     this.reconnectAfterMs = reconnectAfterMs ??
         (int tries) {
           return [1000, 5000, 10000][tries - 1] ?? 10000;
         };
-    this.encode = encode ??
-        (dynamic payload, Function callback) => callback(json.encode(payload));
-    this.decode = decode ??
-        (dynamic payload, Function callback) => callback(json.decode(payload));
+    encode ??= (dynamic payload, Function(String result) callback) => callback(json.encode(payload));
+    decode ??= (String payload, Function(dynamic result) callback) => callback(json.decode(payload));
 
-    reconnectTimer = RetryTimer(
-        () => {disconnect(callback: () => connect())}, this.reconnectAfterMs);
+    reconnectTimer = RetryTimer(() => {disconnect(callback: () => connect())}, this.reconnectAfterMs);
   }
 
   String endPointURL() {
-    var params = Map.from(this.params);
-    params['vsn'] = constants.VSN;
+    final params = Map<String, String>.from(this.params);
+    params['vsn'] = Constants.VSN;
     return appendParams(endPoint, params);
   }
 
-  String appendParams(String url, Map params) {
+  String appendParams(String url, Map<String, dynamic> params) {
     if (params.keys.isEmpty) return url;
 
     var endpoint = Uri.parse(url);
-    var searchParams = Map<String, dynamic>.from(endpoint.queryParameters);
+    final searchParams = Map<String, dynamic>.from(endpoint.queryParameters);
     params.forEach((k, v) => searchParams[k] = v);
     endpoint = endpoint.replace(queryParameters: searchParams);
 
@@ -116,7 +92,7 @@ class Socket {
 
   void disconnect({Function callback, int code, String reason}) {
     if (conn != null || conn?.sink != null) {
-      connState = constants.SOCKET_STATES.disconnected;
+      connState = SocketStates.disconnected;
       if (code != null) {
         conn.sink.close(code, reason ?? '');
       } else {
@@ -131,22 +107,22 @@ class Socket {
     if (conn != null) return;
 
     try {
-      connState = constants.SOCKET_STATES.connecting;
-      conn = IOWebSocketChannel.connect(endPointURL(), headers: headers);
+      connState = SocketStates.connecting;
+      conn = transport(endPointURL(), headers);
       if (conn != null) {
-        connState = constants.SOCKET_STATES.open;
+        connState = SocketStates.open;
         onConnOpen();
         conn.stream.timeout(Duration(milliseconds: longpollerTimeout));
         conn.stream.listen((message) {
           // handling of the incoming messages
-          onConnMessage(message);
+          onConnMessage(message as String);
         }, onError: (error) {
           // error handling
           onConnError(error);
         }, onDone: () {
           // communication has been closed
-          if (connState != constants.SOCKET_STATES.disconnected) {
-            connState = constants.SOCKET_STATES.closed;
+          if (connState != SocketStates.disconnected) {
+            connState = SocketStates.closed;
             onConnClose('');
           }
         });
@@ -188,8 +164,7 @@ class Socket {
     flushSendBuffer();
     reconnectTimer.reset();
     if (heartbeatTimer != null) heartbeatTimer.cancel();
-    heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs),
-        (Timer t) => sendHeartbeat());
+    heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs), (Timer t) => sendHeartbeat());
     stateChangeCallbacks['open'].forEach((callback) => callback());
   }
 
@@ -208,22 +183,24 @@ class Socket {
   }
 
   void triggerChanError() {
-    channels
-        .forEach((channel) => channel.trigger(constants.CHANNEL_EVENTS.error));
+    channels.forEach((channel) => channel.trigger(ChannelEvents.error.eventName()));
   }
 
   String connectionState() {
     switch (connState) {
-      case 0:
+      case SocketStates.connecting:
         return 'connecting';
-      case 1:
+      case SocketStates.open:
         return 'open';
-      case 2:
+      case SocketStates.closing:
         return 'closing';
-      case 3:
+      case SocketStates.closed:
         return 'closed';
+      case SocketStates.disconnected:
+        return 'disconnected';
+      default:
+        return '';
     }
-    return '';
   }
 
   bool isConnected() {
@@ -231,26 +208,24 @@ class Socket {
   }
 
   void remove(Channel channel) {
-    channels = channels.where((c) => c.joinRef() != channel.joinRef());
+    channels = channels.where((c) => c.joinRef() != channel.joinRef()).toList();
   }
 
   Channel channel(String topic, {Map chanParams = const {}}) {
-    var chan = Channel(topic, this, params: chanParams);
+    final chan = Channel(topic, this, params: chanParams);
     channels.add(chan);
     return chan;
   }
 
-  void push({String topic, String event, dynamic payload, String ref}) {
-    var callback = () => {
-          encode(
-              {'topic': topic, 'event': event, 'payload': payload, 'ref': ref},
-              (result) {
-            // print('send message ${result}');
+  void push({String topic, ChannelEvents event, dynamic payload, String ref}) {
+    final callback = () => {
+          encode({'topic': topic, 'event': event, 'payload': payload, 'ref': ref}, (result) {
+            // print('send message $result');
             conn.sink.add(result);
           })
         };
 
-    log('push', '${topic} ${event} (${ref})', payload);
+    log('push', '$topic $event ($ref)', payload);
 
     if (isConnected()) {
       callback();
@@ -261,7 +236,7 @@ class Socket {
 
   // Return the next message ref, accounting for overflows
   String makeRef() {
-    var newRef = ref + 1;
+    final newRef = ref + 1;
     if (newRef == ref) {
       ref = 0;
     } else {
@@ -276,18 +251,13 @@ class Socket {
 
     if (pendingHeartbeatRef != null) {
       pendingHeartbeatRef = null;
-      log('transport',
-          'heartbeat timeout. Attempting to re-establish connection');
-      conn.sink.close(constants.WS_CLOSE_NORMAL, 'hearbeat timeout');
+      log('transport', 'heartbeat timeout. Attempting to re-establish connection');
+      conn.sink.close(Constants.WS_CLOSE_NORMAL, 'heartbeat timeout');
       return;
     }
 
     pendingHeartbeatRef = makeRef();
-    push(
-        topic: 'phoenix',
-        event: 'heartbeat',
-        payload: {},
-        ref: pendingHeartbeatRef);
+    push(topic: 'phoenix', event: ChannelEvents.heartbeat, payload: {}, ref: pendingHeartbeatRef);
   }
 
   void flushSendBuffer() {
@@ -297,23 +267,21 @@ class Socket {
     }
   }
 
-  void onConnMessage(rawMessage) {
+  void onConnMessage(String rawMessage) {
     decode(rawMessage, (msg) {
-      var topic = msg['topic'];
-      var event = msg['event'];
-      var payload = msg['payload'];
-      var ref = msg['ref'];
+      final topic = msg['topic'] as String;
+      final event = msg['event'] as String;
+      final payload = msg['payload'];
+      final ref = msg['ref'] as String;
       if (ref != null && ref == pendingHeartbeatRef) {
         pendingHeartbeatRef = null;
       }
 
-      log(
-          'receive',
-          "${payload['status'] ?? ''} ${topic} ${event} ${ref != null ? '(' + ref + ')' : ''}",
-          payload);
+      log('receive', "${payload['status'] ?? ''} $topic $event ${ref != null ? '($ref)' : ''}", payload);
 
-      channels.where((channel) => channel.isMember(topic)).forEach(
-          (channel) => channel.trigger(event, payload: payload, ref: ref));
+      channels
+          .where((channel) => channel.isMember(topic))
+          .forEach((channel) => channel.trigger(event, payload: payload, ref: ref));
       stateChangeCallbacks['message'].forEach((callback) => callback(msg));
     });
   }

@@ -19,8 +19,8 @@ typedef TimerCalculation = int Function(int tries);
 /// reconnectTimer.scheduleTimeout() // fires after 1000
 /// ```
 class RetryTimer {
-  TimerCallback callback;
-  TimerCalculation timerCalc;
+  final TimerCallback callback;
+  final TimerCalculation timerCalc;
 
   Timer _timer;
   int _tries;
