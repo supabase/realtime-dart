@@ -1,22 +1,22 @@
 import 'dart:async';
 
 import '../channel.dart';
-import 'constants.dart' as constants;
+import 'constants.dart';
 
 typedef Callback = void Function(dynamic response);
 
 /// Push event obj
 class Push {
-  Channel channel;
-  String event;
-  String ref;
-  String refEvent;
-  dynamic payload;
-  dynamic receivedResp;
-  int timeout;
-  Timer timeoutTimer;
-  List recHooks = [];
-  bool sent;
+  final Channel _channel;
+  final ChannelEvents _event;
+  String _ref;
+  String _refEvent;
+  final Map<dynamic, dynamic> payload;
+  dynamic _receivedResp;
+  Duration _timeout;
+  Timer _timeoutTimer;
+  final List<Hook> _recHooks = [];
+  bool _sent;
 
   /// Initializes the Push
   ///
@@ -24,16 +24,19 @@ class Push {
   /// `event` The event, for example `"phx_join"`
   /// `payload` The payload, for example `{user_id: 123}`
   /// `timeout` The push timeout in milliseconds
-  Push(this.channel, this.event,
-      {this.payload = const {}, this.timeout = constants.DEFAULT_TIMEOUT});
+  Push(this._channel, this._event, [this.payload = const {}, this._timeout = Constants.DEFAULT_TIMEOUT]);
 
-  void resend(int timeout) {
-    this.timeout = timeout;
+  String get ref => _ref;
+
+  Duration get timeout => _timeout;
+
+  void resend(Duration timeout) {
+    _timeout = timeout;
     cancelRefEvent();
-    ref = '';
-    refEvent = null;
-    receivedResp = null;
-    sent = false;
+    _ref = '';
+    _refEvent = null;
+    _receivedResp = null;
+    _sent = false;
     send();
   }
 
@@ -41,10 +44,10 @@ class Push {
     if (_hasReceived('timeout')) return;
 
     startTimeout();
-    sent = true;
-    channel.socket.push(
-      topic: channel.topic,
-      event: event,
+    _sent = true;
+    _channel.socket.push(
+      topic: _channel.topic,
+      event: _event,
       payload: payload,
       ref: ref,
     );
@@ -52,34 +55,34 @@ class Push {
 
   Push receive(String status, Callback callback) {
     if (_hasReceived(status)) {
-      callback(receivedResp?.response);
+      callback(_receivedResp?.response);
     }
 
-    recHooks.add({'status': status, 'callback': callback});
+    _recHooks.add(Hook(status, callback));
     return this;
   }
 
   void startTimeout() {
-    if (timeoutTimer == null) return;
+    if (_timeoutTimer == null) return;
 
-    ref = channel.socket.makeRef();
-    refEvent = channel.replyEventName(ref);
+    _ref = _channel.socket.makeRef();
+    _refEvent = _channel.replyEventName(ref);
 
-    channel.on(refEvent, (dynamic payload, {ref}) {
+    _channel.on(_refEvent, (dynamic payload, {ref}) {
       cancelRefEvent();
       cancelTimeout();
-      receivedResp = payload;
-      matchReceive(payload['status'], payload['response']);
+      _receivedResp = payload;
+      matchReceive(payload['status'] as String, payload['response']);
     });
 
-    timeoutTimer = Timer(Duration(milliseconds: timeout), () {
+    _timeoutTimer = Timer(timeout, () {
       trigger('timeout', {});
     });
   }
 
   void trigger(status, response) {
-    if (refEvent != null) {
-      channel.trigger(refEvent, payload: {
+    if (_refEvent != null) {
+      _channel.trigger(_refEvent, payload: {
         'status': status,
         'response': response,
       });
@@ -87,24 +90,29 @@ class Push {
   }
 
   void cancelRefEvent() {
-    if (refEvent == null) {
+    if (_refEvent == null) {
       return;
     }
-    channel.off(refEvent);
+    _channel.off(_refEvent);
   }
 
   void cancelTimeout() {
-    timeoutTimer.cancel();
-    timeoutTimer = null;
+    _timeoutTimer.cancel();
+    _timeoutTimer = null;
   }
 
   void matchReceive(String status, dynamic response) {
-    recHooks
-        .where((h) => h.status == status)
-        .forEach((h) => h.callback(response));
+    _recHooks.where((h) => h.status == status).forEach((h) => h.callback(response));
   }
 
   bool _hasReceived(String status) {
-    return receivedResp != null && receivedResp.status == status;
+    return _receivedResp != null && _receivedResp.status == status;
   }
+}
+
+class Hook {
+  String status;
+  Callback callback;
+
+  Hook(this.status, this.callback);
 }

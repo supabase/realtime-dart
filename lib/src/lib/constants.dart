@@ -1,31 +1,27 @@
-const String VSN = '1.0.0';
-const int DEFAULT_TIMEOUT = 10000;
-const int WS_CLOSE_NORMAL = 1000;
-
-class SOCKET_STATES {
-  static int get connecting => 0;
-  static int get open => 1;
-  static int get closing => 2;
-  static int get closed => 3;
-  static int get disconnected => 4;
+class Constants {
+  static const String VSN = '1.0.0';
+  static const Duration DEFAULT_TIMEOUT = Duration(milliseconds: 10000);
+  static const int WS_CLOSE_NORMAL = 1000;
 }
 
-class CHANNEL_STATES {
-  static String get closed => 'closed';
-  static String get errored => 'errored';
-  static String get joined => 'joined';
-  static String get joining => 'joining';
-  static String get leaving => 'leaving';
+enum SocketStates { connecting, open, closing, closed, disconnected }
+
+enum ChannelStates { closed, errored, joined, joining, leaving }
+
+enum ChannelEvents { close, error, join, reply, leave, heartbeat }
+
+extension SocketStatesName on SocketStates {
+  String name() {
+    return toString().split('.').last;
+  }
 }
 
-class CHANNEL_EVENTS {
-  static String get close => 'phx_close';
-  static String get error => 'phx_error';
-  static String get join => 'phx_join';
-  static String get reply => 'phx_reply';
-  static String get leave => 'phx_leave';
+extension ChannelEventsName on ChannelEvents {
+  String eventName() {
+    return 'phx_${toString().split('.').last}';
+  }
 }
 
-class TRANSPORTS {
-  static String get websocket => 'websocket';
+class Transports {
+  static const String websocket = 'websocket';
 }

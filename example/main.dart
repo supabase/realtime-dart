@@ -2,14 +2,11 @@ import 'package:realtime/realtime.dart';
 
 /// Example to use with Supabase Realtime https://supabase.io/
 void main() async {
-  var socket = Socket('ws://SUPABASE_API_ENDPOINT/realtime/v1',
-      params: {'apikey': 'SUPABSE_API_KEY'},
-      logger: (kind, msg, data) => {print('${kind} ${msg} ${data}')});
-  var channel = socket.channel('realtime:*');
+  final socket = Socket('ws://SUPABASE_API_ENDPOINT/realtime/v1',
+      params: {'apikey': 'SUPABSE_API_KEY'}, logger: (kind, msg, data) => {print('$kind $msg $data')});
+  final channel = socket.channel('realtime:*');
 
-  socket.onMessage((message) {
-    print('MESSAGE ${message}');
-  });
+  socket.onMessage((message) => print('MESSAGE $message'));
 
   socket.connect();
   channel.subscribe();

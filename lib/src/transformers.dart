@@ -54,10 +54,9 @@ class Column {
 /// convertChangeData([{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], {first_name: 'Paul', age:'33'}, {})
 /// => { first_name: 'Paul', age: 33 }
 /// ```
-Map convertChangeData(List<Column> columns, Map<String, String> records,
-    {List<String> skipTypes}) {
-  var result = <String, dynamic>{};
-  var _skipTypes = skipTypes ?? [];
+Map convertChangeData(List<Column> columns, Map<String, String> records, {List<String> skipTypes}) {
+  final result = <String, dynamic>{};
+  final _skipTypes = skipTypes ?? [];
 
   records.forEach((key, value) {
     result[key] = convertColumn(key, columns, records, _skipTypes);
@@ -78,10 +77,8 @@ Map convertChangeData(List<Column> columns, Map<String, String> records,
 /// convertColumn('age', [{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], ['Paul', '33'], ['int4'])
 /// => "33"
 /// ```
-dynamic convertColumn(String columnName, List<Column> columns,
-    Map<String, String> records, List<String> skipTypes) {
-  var column =
-      columns.firstWhere((x) => x.name == columnName, orElse: () => null);
+dynamic convertColumn(String columnName, List<Column> columns, Map<String, String> records, List<String> skipTypes) {
+  final column = columns.firstWhere((x) => x.name == columnName, orElse: () => null);
   if (column == null || skipTypes.contains(column.type)) {
     return noop(records[columnName]);
   } else {
@@ -109,13 +106,11 @@ dynamic convertCell(String type, String stringValue) {
 
     // if data type is an array
     if (type[0] == '_') {
-      var arrayValue = type.substring(1, type.length);
+      final arrayValue = type.substring(1, type.length);
       return toArray(stringValue, arrayValue);
     }
 
-    var typeEnum = PostgresTypes.values.firstWhere(
-        (e) => e.toString() == 'PostgresTypes.' + type,
-        orElse: () => null);
+    final typeEnum = PostgresTypes.values.firstWhere((e) => e.toString() == 'PostgresTypes.$type', orElse: () => null);
     // If not null, convert to correct type.
     switch (typeEnum) {
       case PostgresTypes.abstime:
@@ -169,8 +164,8 @@ dynamic convertCell(String type, String stringValue) {
         return noop(stringValue);
     }
   } catch (error) {
-    print('Could not convert cell of type ${type} and value ${stringValue}');
-    print('This is the error: ${error}');
+    print('Could not convert cell of type $type and value $stringValue');
+    print('This is the error: $error');
     return stringValue;
   }
 }
@@ -183,14 +178,14 @@ dynamic convertCell(String type, String stringValue) {
 /// @example toArray('{}', 'int4')
 /// //=> []
 ///  ```
-List toArray(String type, String stringValue) {
+List<dynamic> toArray(String type, String stringValue) {
   // this takes off the '{' & '}'
-  var stringEnriched = stringValue.substring(1, stringValue.length - 1);
+  final stringEnriched = stringValue.substring(1, stringValue.length - 1);
 
   // converts the string into an array
   // if string is empty (meaning the array was empty), an empty array will be immediately returned
-  var stringArray = stringEnriched.isNotEmpty ? stringEnriched.split(',') : [];
-  var array = stringArray.map((string) => convertCell(type, string));
+  final stringArray = stringEnriched.isNotEmpty ? stringEnriched.split(',') : <String>[];
+  final array = stringArray.map((string) => convertCell(type, string)).toList();
   return array;
 }
 
@@ -225,8 +220,8 @@ DateTime toDate(String stringValue) {
 }
 
 List<DateTime> toDateRange(String stringValue) {
-  var arr = json.decode(stringValue);
-  return [DateTime.parse(arr[0]), DateTime.parse(arr[1])];
+  final arr = json.decode(stringValue);
+  return [DateTime.parse(arr[0] as String), DateTime.parse(arr[1] as String)];
 }
 
 double toDouble(String stringValue) {
@@ -238,8 +233,8 @@ int toInt(String stringValue) {
 }
 
 List<int> toIntRange(String stringValue) {
-  var arr = json.decode(stringValue);
-  return [int.parse(arr[0]), int.parse(arr[1])];
+  final arr = json.decode(stringValue);
+  return [int.parse(arr[0] as String), int.parse(arr[1] as String)];
 }
 
 dynamic toJson(String stringValue) {
