@@ -12,7 +12,12 @@ void main() {
 
   setUp(() async {
     mockServer = await HttpServer.bind('localhost', 0);
-    mockServer.transform(WebSocketTransformer());
+    mockServer.transform(WebSocketTransformer()).listen((webSocket) {
+      final channel = IOWebSocketChannel(webSocket);
+      channel.stream.listen((request) {
+        channel.sink.add(request);
+      });
+    });
   });
 
   tearDown(() async {
@@ -40,7 +45,7 @@ void main() {
       expect(socket.timeout, const Duration(milliseconds: 10000));
       expect(socket.longpollerTimeout, 20000);
       expect(socket.heartbeatIntervalMs, 30000);
-      expect(socket.logger is Logger, true);
+      expect(socket.logger is Logger, false);
       expect(socket.reconnectAfterMs is Function, true);
     });
 
@@ -96,7 +101,7 @@ void main() {
     Socket socket;
 
     setUp(() {
-      socket = Socket('wss://localhost:0/');
+      socket = Socket('ws://localhost:${mockServer.port}');
     });
     test('establishes websocket connection with endpoint', () {
       socket.connect();
@@ -116,10 +121,6 @@ void main() {
       socket.onClose((_) {
         closes += 1;
       });
-      dynamic lastErr;
-      socket.onError((e) {
-        lastErr = e;
-      });
       dynamic lastMsg;
       socket.onMessage((m) {
         lastMsg = m;
@@ -128,20 +129,26 @@ void main() {
       socket.connect();
       expect(opens, 1);
 
-      socket.conn.sink.addError('error');
-      expect(lastErr, 'error');
+      socket.sendHeartbeat();
+      // need to wait for event to trigger
+      await Future.delayed(const Duration(seconds: 1), () {});
+      expect(lastMsg['event'], 'phx_heartbeat');
 
-      const data = {
-        'topic': 'topic',
-        'event': 'event',
-        'payload': 'payload',
-        'status': 'ok',
-      };
-      socket.conn.sink.add(data);
-      expect(lastMsg, 'payload');
-
-      await socket.conn.sink.close();
+      socket.disconnect();
+      await Future.delayed(const Duration(seconds: 1), () {});
       expect(closes, 1);
+    });
+
+    test('sets callback for errors', () {
+      dynamic lastErr;
+      Socket erroneousSocket = Socket('badurl')
+        ..onError((e) {
+          lastErr = e;
+        });
+
+      erroneousSocket.connect();
+
+      expect(lastErr, isA<WebSocketException>());
     });
 
     test('is idempotent', () {
@@ -165,12 +172,13 @@ void main() {
     });
 
     test('calls callback', () {
-      int count = 0;
+      int closes = 0;
       socket.connect();
-      socket.disconnect();
-      count++;
+      socket.disconnect(callback: () {
+        closes += 1;
+      });
 
-      expect(count, 1);
+      expect(closes, 1);
     });
   });
 }
