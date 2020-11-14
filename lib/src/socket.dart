@@ -219,7 +219,7 @@ class Socket {
 
   void push({String topic, ChannelEvents event, dynamic payload, String ref}) {
     final callback = () => {
-          encode({'topic': topic, 'event': event, 'payload': payload, 'ref': ref}, (result) {
+          encode({'topic': topic, 'event': event.eventName(), 'payload': payload, 'ref': ref}, (result) {
             // print('send message $result');
             conn.sink.add(result);
           })
