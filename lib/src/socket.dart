@@ -123,8 +123,8 @@ class Socket {
           // communication has been closed
           if (connState != SocketStates.disconnected) {
             connState = SocketStates.closed;
-            onConnClose('');
           }
+          onConnClose('');
         });
       }
     } catch (e) {
@@ -165,25 +165,38 @@ class Socket {
     reconnectTimer.reset();
     if (heartbeatTimer != null) heartbeatTimer.cancel();
     heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs), (Timer t) => sendHeartbeat());
-    stateChangeCallbacks['open'].forEach((callback) => callback());
+    for (final callback in stateChangeCallbacks['open']) {
+      callback();
+    }
   }
 
-  void onConnClose(event) {
+  void onConnClose(String event) {
     log('transport', 'close', event);
-    triggerChanError();
-    if (heartbeatTimer != null) heartbeatTimer.cancel();
-    reconnectTimer.scheduleTimeout();
-    stateChangeCallbacks['close'].forEach((callback) => callback(event));
+    // communication has been closed
+    // SocketStates.disconnected: by user with socket.disconnect()
+    // SocketStates.closed: NOT by user, should try to reconnect 
+    if (connState == SocketStates.closed) {
+      triggerChanError();
+      if (heartbeatTimer != null) heartbeatTimer.cancel();
+      reconnectTimer.scheduleTimeout();
+    }
+    for (final callback in stateChangeCallbacks['close']) {
+      callback(event);
+    }
   }
 
-  void onConnError(error) {
+  void onConnError(dynamic error) {
     log('transport', error.toString());
     triggerChanError();
-    stateChangeCallbacks['error'].forEach((callback) => callback(error));
+    for (final callback in stateChangeCallbacks['error']) {
+      callback(error);
+    }
   }
 
   void triggerChanError() {
-    channels.forEach((channel) => channel.trigger(ChannelEvents.error.eventName()));
+    for (final channel in channels) {
+      channel.trigger(ChannelEvents.error.eventName());
+    }
   }
 
   String connectionState() {
@@ -218,13 +231,12 @@ class Socket {
   }
 
   void push({String topic, ChannelEvents event, dynamic payload, String ref}) {
-    final callback = () => {
-          encode({'topic': topic, 'event': event, 'payload': payload, 'ref': ref}, (result) {
-            // print('send message $result');
-            conn.sink.add(result);
-          })
-        };
-
+    void callback() {
+      encode({'topic': topic, 'event': event.eventName(), 'payload': payload, 'ref': ref}, (result) {
+        // print('send message $result');
+        conn.sink.add(result);
+      });
+    }
     log('push', '$topic $event ($ref)', payload);
 
     if (isConnected()) {
@@ -262,7 +274,9 @@ class Socket {
 
   void flushSendBuffer() {
     if (isConnected() && sendBuffer.isNotEmpty) {
-      sendBuffer.forEach((callback) => callback());
+      for (final callback in sendBuffer){
+        callback();
+      }
       sendBuffer = [];
     }
   }
@@ -282,7 +296,9 @@ class Socket {
       channels
           .where((channel) => channel.isMember(topic))
           .forEach((channel) => channel.trigger(event, payload: payload, ref: ref));
-      stateChangeCallbacks['message'].forEach((callback) => callback(msg));
+      for (final callback in stateChangeCallbacks['message']) {
+        callback(msg);
+      }
     });
   }
 }
