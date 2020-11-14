@@ -172,7 +172,10 @@ class Socket {
 
   void onConnClose(String event) {
     log('transport', 'close', event);
-    if (connState != SocketStates.disconnected) {
+    // communication has been closed
+    // SocketStates.disconnected: by user with socket.disconnect()
+    // SocketStates.closed: NOT by user, should try to reconnect 
+    if (connState == SocketStates.closed) {
       triggerChanError();
       if (heartbeatTimer != null) heartbeatTimer.cancel();
       reconnectTimer.scheduleTimeout();
