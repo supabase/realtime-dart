@@ -123,8 +123,8 @@ class Socket {
           // communication has been closed
           if (connState != SocketStates.disconnected) {
             connState = SocketStates.closed;
-            onConnClose('');
           }
+          onConnClose('');
         });
       }
     } catch (e) {
@@ -172,9 +172,11 @@ class Socket {
 
   void onConnClose(String event) {
     log('transport', 'close', event);
-    triggerChanError();
-    if (heartbeatTimer != null) heartbeatTimer.cancel();
-    reconnectTimer.scheduleTimeout();
+    if (connState != SocketStates.disconnected) {
+      triggerChanError();
+      if (heartbeatTimer != null) heartbeatTimer.cancel();
+      reconnectTimer.scheduleTimeout();
+    }
     for (final callback in stateChangeCallbacks['close']) {
       callback(event);
     }
