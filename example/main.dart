@@ -1,4 +1,4 @@
-import 'package:realtime/realtime.dart';
+import 'package:realtime_client/realtime_client.dart';
 
 /// Example to use with Supabase Realtime https://supabase.io/
 void main() async {

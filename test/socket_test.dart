@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:realtime/realtime.dart';
+import 'package:realtime_client/realtime_client.dart';
 import 'package:web_socket_channel/io.dart';
 
 typedef IOWebSocketChannelClosure = IOWebSocketChannel Function(

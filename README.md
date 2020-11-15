@@ -17,7 +17,7 @@ You're welcome to try it, but expect some breaking changes.
 You can set up one connection to be used across the whole app.
 
 ```dart
-import 'package:realtime/realtime.dart';
+import 'package:realtime_client/realtime_client.dart';
 
 var socket = Socket(REALTIME_URL);
 socket.connect();
@@ -27,8 +27,9 @@ socket.connect();
 
 ```dart
 socket.onOpen(() => print('Socket opened.'));
-socket.onClose(() => print('Socket closed.'));
-socket.onError((e) => print('Socket error ${e.message}'));
+socket.onClose((event) => print('Socket closed $event'));
+socket.onError((error) => print('Socket error: $error'));
+socket.onMessage((message) => print('Socket message: $message'));
 ```
 
 ## Credits

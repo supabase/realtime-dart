@@ -1,4 +1,4 @@
-import 'package:realtime/realtime.dart';
+import 'package:realtime_client/realtime_client.dart';
 import 'package:test/test.dart';
 
 void main() {
