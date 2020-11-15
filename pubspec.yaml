@@ -1,7 +1,6 @@
 name: realtime_client
-description: Listens to changes in a PostgreSQL Database and via websockets.
-  This is for usage with [Supabase Realtime](https://github.com/supabase/realtime) server.
-version: 0.0.1-dev.2
+description: Listens to changes in a PostgreSQL Database and via websockets. This is for usage with Supabase Realtime server.
+version: 0.0.1-dev.3
 homepage: "https://supabase.io"
 repository: "https://github.com/supabase/realtime-dart"
 
