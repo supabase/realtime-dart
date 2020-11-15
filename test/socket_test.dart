@@ -23,8 +23,6 @@ void main() {
   tearDown(() async {
     if (mockServer != null) {
       await mockServer.close();
-    } else {
-      print('mock server was null');
     }
   });
 
@@ -54,7 +52,7 @@ void main() {
           timeout: const Duration(milliseconds: 40000),
           longpollerTimeout: 50000,
           heartbeatIntervalMs: 60000,
-          logger: (kind, msg, data) => print('[$kind] $msg $data'));
+          logger: (kind, msg, data) => {});
       expect(socket.channels.length, 0);
       expect(socket.sendBuffer.length, 0);
       expect(socket.ref, 0);
@@ -103,6 +101,7 @@ void main() {
     setUp(() {
       socket = Socket('ws://localhost:${mockServer.port}');
     });
+
     test('establishes websocket connection with endpoint', () {
       socket.connect();
 
@@ -141,7 +140,7 @@ void main() {
 
     test('sets callback for errors', () {
       dynamic lastErr;
-      Socket erroneousSocket = Socket('badurl')
+      final erroneousSocket = Socket('badurl')
         ..onError((e) {
           lastErr = e;
         });
