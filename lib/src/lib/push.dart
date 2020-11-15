@@ -16,7 +16,7 @@ class Push {
   Duration _timeout;
   Timer _timeoutTimer;
   final List<Hook> _recHooks = [];
-  bool _sent;
+  bool sent;
 
   /// Initializes the Push
   ///
@@ -24,7 +24,7 @@ class Push {
   /// `event` The event, for example `"phx_join"`
   /// `payload` The payload, for example `{user_id: 123}`
   /// `timeout` The push timeout in milliseconds
-  Push(this._channel, this._event, [this.payload = const {}, this._timeout = Constants.DEFAULT_TIMEOUT]);
+  Push(this._channel, this._event, [this.payload = const {}, this._timeout = Constants.defaultTimeout]);
 
   String get ref => _ref;
 
@@ -36,7 +36,7 @@ class Push {
     _ref = '';
     _refEvent = null;
     _receivedResp = null;
-    _sent = false;
+    sent = false;
     send();
   }
 
@@ -44,7 +44,7 @@ class Push {
     if (_hasReceived('timeout')) return;
 
     startTimeout();
-    _sent = true;
+    sent = true;
     _channel.socket.push(
       topic: _channel.topic,
       event: _event,
@@ -80,7 +80,7 @@ class Push {
     });
   }
 
-  void trigger(status, response) {
+  void trigger(String status, dynamic response) {
     if (_refEvent != null) {
       _channel.trigger(_refEvent, payload: {
         'status': status,

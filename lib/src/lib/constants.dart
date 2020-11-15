@@ -1,7 +1,7 @@
 class Constants {
-  static const String VSN = '1.0.0';
-  static const Duration DEFAULT_TIMEOUT = Duration(milliseconds: 10000);
-  static const int WS_CLOSE_NORMAL = 1000;
+  static const String vsn = '1.0.0';
+  static const Duration defaultTimeout = Duration(milliseconds: 10000);
+  static const int wsCloseNormal = 1000;
 }
 
 enum SocketStates { connecting, open, closing, closed, disconnected }
