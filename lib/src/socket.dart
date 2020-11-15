@@ -54,7 +54,7 @@ class Socket {
     WebSocketChannelProvider transport,
     this.encode,
     this.decode,
-    this.timeout = Constants.DEFAULT_TIMEOUT,
+    this.timeout = Constants.defaultTimeout,
     this.heartbeatIntervalMs = 30000,
     this.longpollerTimeout = 20000,
     int Function(int) reconnectAfterMs,
@@ -75,7 +75,7 @@ class Socket {
 
   String endPointURL() {
     final params = Map<String, String>.from(this.params);
-    params['vsn'] = Constants.VSN;
+    params['vsn'] = Constants.vsn;
     return appendParams(endPoint, params);
   }
 
@@ -237,6 +237,7 @@ class Socket {
         conn.sink.add(result);
       });
     }
+
     log('push', '$topic $event ($ref)', payload);
 
     if (isConnected()) {
@@ -264,7 +265,7 @@ class Socket {
     if (pendingHeartbeatRef != null) {
       pendingHeartbeatRef = null;
       log('transport', 'heartbeat timeout. Attempting to re-establish connection');
-      conn.sink.close(Constants.WS_CLOSE_NORMAL, 'heartbeat timeout');
+      conn.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
       return;
     }
 
