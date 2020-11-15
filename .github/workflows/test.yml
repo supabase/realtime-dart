@@ -6,29 +6,29 @@ name: Test
 # events but only for the master branch
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 jobs:
-  test:
-    name: Test / OS ${{ matrix.os }} / Node ${{ matrix.node }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        node: ["12"]
+  build:
+    runs-on: ubuntu-latest
 
-    runs-on: ${{ matrix.os }}
+    container:
+      image:  google/dart:latest
 
     steps:
       - name: Checks-out repo
         uses: actions/checkout@v2
 
-      - name: Setup Dart
-        uses: cedx/setup-dart@v2
+      - name: Print Dart SDK version
+        run: dart --version
 
       - name: Install dependencies
-        run: pub get
+        run: dart pub get
+
+      - name: Analyze project source
+        run: dart analyze
 
       - name: Run tests
-        run: pub run test test
+        run: dart test
