@@ -4,7 +4,7 @@ Listens to changes in a PostgreSQL Database and via websockets.
 
 This is for usage with Supabase [Realtime](https://github.com/supabase/realtime) server.
 
-[![pub package](https://img.shields.io/pub/v/realtime.svg)](https://pub.dev/packages/realtime)
+[![pub package](https://img.shields.io/pub/v/realtime_client.svg)](https://pub.dev/packages/realtime_client)
 [![pub test](https://github.com/supabase/realtime-dart/workflows/Test/badge.svg)](https://github.com/supabase/realtime-dart/actions?query=workflow%3ATest)
 
 **Pre-release verion! This repo is still under heavy development and the documentation is evolving.**
