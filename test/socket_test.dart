@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:mockito/mockito.dart';
-import 'package:realtime/src/lib/constants.dart';
+import 'package:realtime_client/src/lib/constants.dart';
 import 'package:test/test.dart';
-import 'package:realtime/realtime_client.dart';
+import 'package:realtime_client/realtime_client.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
