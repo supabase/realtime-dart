@@ -23,7 +23,9 @@ class Channel {
     _joinPush.receive('ok', (response) {
       _state = ChannelStates.joined;
       _rejoinTimer.reset();
-      _pushBuffer.forEach((pushEvent) => pushEvent.send());
+      for (final pushEvent in _pushBuffer) {
+        pushEvent.send();
+      }
       _pushBuffer = [];
     });
 
@@ -117,11 +119,12 @@ class Channel {
   /// channel.unsubscribe().receive("ok", () => alert("left!") )
   /// ```
   Push unsubscribe({Duration timeout}) {
-    _state = ChannelStates.leaving;
-    final onClose = () {
+    void onClose() {
       socket.log('channel', 'leave $topic');
       trigger(ChannelEvents.close.eventName(), payload: 'leave', ref: joinRef());
-    };
+    }
+    
+    _state = ChannelStates.leaving;
     final leavePush = Push(this, ChannelEvents.leave, {}, timeout ?? _timeout);
     leavePush.receive('ok', (_) => onClose()).receive('timeout', (_) => onClose());
     leavePush.send();
