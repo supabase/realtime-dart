@@ -25,7 +25,7 @@ void main() {
     mockServer.transform(WebSocketTransformer()).listen((webSocket) {
       final channel = IOWebSocketChannel(webSocket);
       channel.stream.listen((request) {
-        channel.sink.add(request);
+        // channel.sink.add(request);
       });
     });
   });
@@ -355,6 +355,49 @@ void main() {
       socket.ref = int64MaxValue + 1;
       expect(socket.makeRef(), '0');
       expect(socket.ref, 0);
+    });
+  });
+
+  group('sendHeartbeat', () {
+    IOWebSocketChannel mockedSocketChannel;
+    Socket mockedSocket;
+    WebSocketSink mockedSink;
+    final data = json.encode({
+      'topic': 'phoenix',
+      'event': ChannelEvents.heartbeat.eventName(),
+      'payload': {},
+      'ref': '1'
+    });
+
+    setUp(() {
+      mockedSocketChannel = MockIOWebSocketChannel();
+      mockedSocket = Socket(
+        socketEndpoint,
+        transport: (url, headers) {
+          return mockedSocketChannel;
+        },
+      );
+      mockedSink = MockWebSocketSink();
+
+      when(mockedSocketChannel.sink).thenReturn(mockedSink);
+
+      mockedSocket.connect();
+    });
+
+    //! Unimplemented Test: closes socket when heartbeat is not ack'd within heartbeat window
+
+    test('pushes heartbeat data when connected', () {
+      mockedSocket.connState = SocketStates.open;
+
+      mockedSocket.sendHeartbeat();
+      verify(mockedSink.add(data));
+    });
+
+    test('no ops when not connected', () {
+      mockedSocket.connState = SocketStates.connecting;
+
+      mockedSocket.sendHeartbeat();
+      verifyNever(mockedSink.add(data));
     });
   });
 }
