@@ -40,7 +40,7 @@ class Column {
   String type;
 
   /// the type modifier. eg: 4294967295
-  int type_modifier;
+  int typeModifier;
 }
 
 /// Takes an array of columns and an object of string values then converts each string value
@@ -164,8 +164,8 @@ dynamic convertCell(String type, String stringValue) {
         return noop(stringValue);
     }
   } catch (error) {
-    print('Could not convert cell of type $type and value $stringValue');
-    print('This is the error: $error');
+    //print('Could not convert cell of type $type and value $stringValue');
+    //print('This is the error: $error');
     return stringValue;
   }
 }
