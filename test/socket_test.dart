@@ -352,7 +352,7 @@ void main() {
     });
 
     test('restarts for overflow', () {
-      socket.ref = int64MaxValue + 1;
+      socket.ref = int64MaxValue;
       expect(socket.makeRef(), '0');
       expect(socket.ref, 0);
     });
