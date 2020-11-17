@@ -10,9 +10,12 @@ import 'lib/constants.dart';
 import 'lib/retry_timer.dart';
 
 typedef Logger = void Function(String kind, String msg, dynamic data);
-typedef Encoder = void Function(dynamic payload, void Function(String result) callback);
-typedef Decoder = void Function(String payload, void Function(dynamic result) callback);
-typedef WebSocketChannelProvider = WebSocketChannel Function(String url, Map<String, String> headers);
+typedef Encoder = void Function(
+    dynamic payload, void Function(String result) callback);
+typedef Decoder = void Function(
+    String payload, void Function(dynamic result) callback);
+typedef WebSocketChannelProvider = WebSocketChannel Function(
+    String url, Map<String, String> headers);
 
 class Socket {
   List<Channel> channels = [];
@@ -33,7 +36,12 @@ class Socket {
   int Function(int) reconnectAfterMs;
   WebSocketChannel conn;
   List sendBuffer = [];
-  Map<String, List<Function>> stateChangeCallbacks = {'open': [], 'close': [], 'error': [], 'message': []};
+  Map<String, List<Function>> stateChangeCallbacks = {
+    'open': [],
+    'close': [],
+    'error': [],
+    'message': []
+  };
   SocketStates connState;
 
   /// Initializes the Socket
@@ -62,15 +70,20 @@ class Socket {
     this.params = const {},
     this.headers = const {},
   })  : endPoint = '$endPoint/${Transports.websocket}',
-        transport = (transport ?? (url, headers) => IOWebSocketChannel.connect(url, headers: headers)) {
+        transport = (transport ??
+            (url, headers) =>
+                IOWebSocketChannel.connect(url, headers: headers)) {
     this.reconnectAfterMs = reconnectAfterMs ??
         (int tries) {
           return [1000, 5000, 10000][tries - 1] ?? 10000;
         };
-    encode ??= (dynamic payload, Function(String result) callback) => callback(json.encode(payload));
-    decode ??= (String payload, Function(dynamic result) callback) => callback(json.decode(payload));
+    encode ??= (dynamic payload, Function(String result) callback) =>
+        callback(json.encode(payload));
+    decode ??= (String payload, Function(dynamic result) callback) =>
+        callback(json.decode(payload));
 
-    reconnectTimer = RetryTimer(() => {disconnect(callback: () => connect())}, this.reconnectAfterMs);
+    reconnectTimer = RetryTimer(
+        () => {disconnect(callback: () => connect())}, this.reconnectAfterMs);
   }
 
   String endPointURL() {
@@ -164,7 +177,8 @@ class Socket {
     flushSendBuffer();
     reconnectTimer.reset();
     if (heartbeatTimer != null) heartbeatTimer.cancel();
-    heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs), (Timer t) => sendHeartbeat());
+    heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs),
+        (Timer t) => sendHeartbeat());
     for (final callback in stateChangeCallbacks['open']) {
       callback();
     }
@@ -174,7 +188,7 @@ class Socket {
     log('transport', 'close', event);
     // communication has been closed
     // SocketStates.disconnected: by user with socket.disconnect()
-    // SocketStates.closed: NOT by user, should try to reconnect 
+    // SocketStates.closed: NOT by user, should try to reconnect
     if (connState == SocketStates.closed) {
       triggerChanError();
       if (heartbeatTimer != null) heartbeatTimer.cancel();
@@ -232,7 +246,12 @@ class Socket {
 
   void push({String topic, ChannelEvents event, dynamic payload, String ref}) {
     void callback() {
-      encode({'topic': topic, 'event': event.eventName(), 'payload': payload, 'ref': ref}, (result) {
+      encode({
+        'topic': topic,
+        'event': event.eventName(),
+        'payload': payload,
+        'ref': ref
+      }, (result) {
         // print('send message $result');
         conn.sink.add(result);
       });
@@ -249,12 +268,14 @@ class Socket {
 
   // Return the next message ref, accounting for overflows
   String makeRef() {
-    final newRef = ref + 1;
-    if (newRef == ref) {
-      ref = 0;
+    const int int64MaxValue = 9223372036854775807;
+    int newRef;
+    if (ref == int64MaxValue) {
+      newRef = 0;
     } else {
-      ref = newRef;
+      newRef = ref + 1;
     }
+    ref = newRef;
 
     return ref.toString();
   }
@@ -264,18 +285,23 @@ class Socket {
 
     if (pendingHeartbeatRef != null) {
       pendingHeartbeatRef = null;
-      log('transport', 'heartbeat timeout. Attempting to re-establish connection');
+      log('transport',
+          'heartbeat timeout. Attempting to re-establish connection');
       conn.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
       return;
     }
 
     pendingHeartbeatRef = makeRef();
-    push(topic: 'phoenix', event: ChannelEvents.heartbeat, payload: {}, ref: pendingHeartbeatRef);
+    push(
+        topic: 'phoenix',
+        event: ChannelEvents.heartbeat,
+        payload: {},
+        ref: pendingHeartbeatRef);
   }
 
   void flushSendBuffer() {
     if (isConnected() && sendBuffer.isNotEmpty) {
-      for (final callback in sendBuffer){
+      for (final callback in sendBuffer) {
         callback();
       }
       sendBuffer = [];
@@ -292,11 +318,13 @@ class Socket {
         pendingHeartbeatRef = null;
       }
 
-      log('receive', "${payload['status'] ?? ''} $topic $event ${ref != null ? '($ref)' : ''}", payload);
+      log(
+          'receive',
+          "${payload['status'] ?? ''} $topic $event ${ref != null ? '($ref)' : ''}",
+          payload);
 
-      channels
-          .where((channel) => channel.isMember(topic))
-          .forEach((channel) => channel.trigger(event, payload: payload, ref: ref));
+      channels.where((channel) => channel.isMember(topic)).forEach(
+          (channel) => channel.trigger(event, payload: payload, ref: ref));
       for (final callback in stateChangeCallbacks['message']) {
         callback(msg);
       }

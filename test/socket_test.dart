@@ -350,6 +350,12 @@ void main() {
       expect(socket.makeRef(), '2');
       expect(socket.ref, 2);
     });
+
+    test('restarts for overflow', () {
+      socket.ref = int64MaxValue;
+      expect(socket.makeRef(), '0');
+      expect(socket.ref, 0);
+    });
   });
 
   group('sendHeartbeat', () {
