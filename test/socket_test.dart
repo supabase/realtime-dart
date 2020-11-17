@@ -25,7 +25,7 @@ void main() {
     mockServer.transform(WebSocketTransformer()).listen((webSocket) {
       final channel = IOWebSocketChannel(webSocket);
       channel.stream.listen((request) {
-        // channel.sink.add(request);
+        channel.sink.add(request);
       });
     });
   });
