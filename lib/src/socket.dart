@@ -268,12 +268,9 @@ class Socket {
 
   // Return the next message ref, accounting for overflows
   String makeRef() {
-    const int int64MaxValue = 9223372036854775807;
-    int newRef;
-    if (ref == int64MaxValue) {
+    int newRef = ref + 1;
+    if (newRef < 0) {
       newRef = 0;
-    } else {
-      newRef = ref + 1;
     }
     ref = newRef;
 
