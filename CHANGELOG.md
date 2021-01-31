@@ -1,3 +1,11 @@
+## [0.0.1-dev.4]
+
+- Improve docs
+
+#### BREAKING CHANGES
+  - Rename `socket` to `RealtimeClient`
+  - Rename `channel` to `RealtimeSubscription`
+
 ## [0.0.1-dev.3]
 
 - Update README Usage with more examples
