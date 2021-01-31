@@ -19,7 +19,7 @@ You can set up one connection to be used across the whole app.
 ```dart
 import 'package:realtime_client/realtime_client.dart';
 
-var client = Socket(REALTIME_URL);
+var client = RealtimeClient(REALTIME_URL);
 client.connect();
 ```
 
