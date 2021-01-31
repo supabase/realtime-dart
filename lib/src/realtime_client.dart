@@ -6,6 +6,7 @@ import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'constants.dart';
+import 'message.dart';
 import 'realtime_subscription.dart';
 import 'retry_timer.dart';
 
@@ -56,7 +57,7 @@ class RealtimeClient {
   /// `encode` The function to encode outgoing messages. Defaults to JSON: (payload, callback) => callback(JSON.stringify(payload))
   /// `decode` The function to decode incoming messages. Defaults to JSON: (payload, callback) => callback(JSON.parse(payload))
   /// `longpollerTimeout` The maximum timeout of a long poll AJAX request. Defaults to 20s (double the server long poll timer).
-  /// `reconnectAfterMs` he optional function that returns the millsec reconnect interval. Defaults to stepped backoff off.
+  /// `reconnectAfterMs` The optional function that returns the millsec reconnect interval. Defaults to stepped backoff off.
   RealtimeClient(
     String endPoint, {
     WebSocketChannelProvider transport,
@@ -75,7 +76,7 @@ class RealtimeClient {
                 IOWebSocketChannel.connect(url, headers: headers)) {
     this.reconnectAfterMs = reconnectAfterMs ??
         (int tries) {
-          return [1000, 5000, 10000][tries - 1] ?? 10000;
+          return [1000, 2000, 5000, 10000][tries - 1] ?? 10000;
         };
     encode ??= (dynamic payload, Function(String result) callback) =>
         callback(json.encode(payload));
@@ -86,23 +87,38 @@ class RealtimeClient {
         () => {disconnect(callback: () => connect())}, this.reconnectAfterMs);
   }
 
-  String endPointURL() {
-    final params = Map<String, String>.from(this.params);
-    params['vsn'] = Constants.vsn;
-    return appendParams(endPoint, params);
+  /// Connects the socket.
+  void connect() {
+    if (conn != null) return;
+
+    try {
+      connState = SocketStates.connecting;
+      conn = transport(endPointURL(), headers);
+      if (conn != null) {
+        connState = SocketStates.open;
+        _onConnOpen();
+        conn.stream.timeout(Duration(milliseconds: longpollerTimeout));
+        conn.stream.listen((message) {
+          // handling of the incoming messages
+          onConnMessage(message as String);
+        }, onError: (error) {
+          // error handling
+          _onConnError(error);
+        }, onDone: () {
+          // communication has been closed
+          if (connState != SocketStates.disconnected) {
+            connState = SocketStates.closed;
+          }
+          _onConnClose('');
+        });
+      }
+    } catch (e) {
+      /// General error handling
+      _onConnError(e);
+    }
   }
 
-  String appendParams(String url, Map<String, dynamic> params) {
-    if (params.keys.isEmpty) return url;
-
-    var endpoint = Uri.parse(url);
-    final searchParams = Map<String, dynamic>.from(endpoint.queryParameters);
-    params.forEach((k, v) => searchParams[k] = v);
-    endpoint = endpoint.replace(queryParameters: searchParams);
-
-    return endpoint.toString();
-  }
-
+  /// Disconnects the socket with status [code] and [reason] for the disconnect
   void disconnect({Function callback, int code, String reason}) {
     if (conn != null || conn?.sink != null) {
       connState = SocketStates.disconnected;
@@ -116,36 +132,6 @@ class RealtimeClient {
     if (callback != null) callback();
   }
 
-  void connect() {
-    if (conn != null) return;
-
-    try {
-      connState = SocketStates.connecting;
-      conn = transport(endPointURL(), headers);
-      if (conn != null) {
-        connState = SocketStates.open;
-        onConnOpen();
-        conn.stream.timeout(Duration(milliseconds: longpollerTimeout));
-        conn.stream.listen((message) {
-          // handling of the incoming messages
-          onConnMessage(message as String);
-        }, onError: (error) {
-          // error handling
-          onConnError(error);
-        }, onDone: () {
-          // communication has been closed
-          if (connState != SocketStates.disconnected) {
-            connState = SocketStates.closed;
-          }
-          onConnClose('');
-        });
-      }
-    } catch (e) {
-      /// General error handling
-      onConnError(e);
-    }
-  }
-
   /// Logs the message. Override `this.logger` for specialized logging.
   void log([String kind, String msg, dynamic data]) {
     if (logger != null) logger(kind, msg, data);
@@ -154,65 +140,28 @@ class RealtimeClient {
   /// Registers callbacks for connection state change events
   ///
   /// Examples
-  /// socket.onError(function(error){ alert("An error occurred") })
+  /// socket.onOpen(() {print("Socket opened.");});
   ///
   void onOpen(Function callback) {
     stateChangeCallbacks['open'].add(callback);
   }
 
+  /// Registers a callbacks for connection state change events.
   void onClose(Function(dynamic) callback) {
     stateChangeCallbacks['close'].add(callback);
   }
 
+  /// Registers a callbacks for connection state change events.
   void onError(Function(dynamic) callback) {
     stateChangeCallbacks['error'].add(callback);
   }
 
+  /// Calls a function any time a message is received.
   void onMessage(Function(dynamic) callback) {
     stateChangeCallbacks['message'].add(callback);
   }
 
-  void onConnOpen() {
-    log('transport', 'connected to ${endPointURL()}');
-    flushSendBuffer();
-    reconnectTimer.reset();
-    if (heartbeatTimer != null) heartbeatTimer.cancel();
-    heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs),
-        (Timer t) => sendHeartbeat());
-    for (final callback in stateChangeCallbacks['open']) {
-      callback();
-    }
-  }
-
-  void onConnClose(String event) {
-    log('transport', 'close', event);
-    // communication has been closed
-    // SocketStates.disconnected: by user with socket.disconnect()
-    // SocketStates.closed: NOT by user, should try to reconnect
-    if (connState == SocketStates.closed) {
-      triggerChanError();
-      if (heartbeatTimer != null) heartbeatTimer.cancel();
-      reconnectTimer.scheduleTimeout();
-    }
-    for (final callback in stateChangeCallbacks['close']) {
-      callback(event);
-    }
-  }
-
-  void onConnError(dynamic error) {
-    log('transport', error.toString());
-    triggerChanError();
-    for (final callback in stateChangeCallbacks['error']) {
-      callback(error);
-    }
-  }
-
-  void triggerChanError() {
-    for (final channel in channels) {
-      channel.trigger(ChannelEvents.error.eventName());
-    }
-  }
-
+  /// Returns the current state of the socket.
   String connectionState() {
     switch (connState) {
       case SocketStates.connecting:
@@ -226,14 +175,16 @@ class RealtimeClient {
       case SocketStates.disconnected:
         return 'disconnected';
       default:
-        return '';
+        return 'closed';
     }
   }
 
+  /// Retuns `true` is the connection is open.
   bool isConnected() {
     return connectionState() == 'open';
   }
 
+  /// Removes a subscription from the socket.
   void remove(RealtimeSubscription channel) {
     channels = channels.where((c) => c.joinRef() != channel.joinRef()).toList();
   }
@@ -244,20 +195,15 @@ class RealtimeClient {
     return chan;
   }
 
-  void push({String topic, ChannelEvents event, dynamic payload, String ref}) {
+  void push(Message message) {
     void callback() {
-      encode({
-        'topic': topic,
-        'event': event.eventName(),
-        'payload': payload,
-        'ref': ref
-      }, (result) {
+      encode(message.toJson(), (result) {
         // print('send message $result');
         conn.sink.add(result);
       });
     }
 
-    log('push', '$topic $event ($ref)', payload);
+    log('push', '${message.topic} ${message.event} (${message.ref})', message.payload);
 
     if (isConnected()) {
       callback();
@@ -266,7 +212,14 @@ class RealtimeClient {
     }
   }
 
-  // Return the next message ref, accounting for overflows
+  /// Returns the URL of the websocket.
+  String endPointURL() {
+    final params = Map<String, String>.from(this.params);
+    params['vsn'] = Constants.vsn;
+    return _appendParams(endPoint, params);
+  }
+
+  /// Return the next message ref, accounting for overflows
   String makeRef() {
     int newRef = ref + 1;
     if (newRef < 0) {
@@ -275,34 +228,6 @@ class RealtimeClient {
     ref = newRef;
 
     return ref.toString();
-  }
-
-  void sendHeartbeat() {
-    if (!isConnected()) return;
-
-    if (pendingHeartbeatRef != null) {
-      pendingHeartbeatRef = null;
-      log('transport',
-          'heartbeat timeout. Attempting to re-establish connection');
-      conn.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
-      return;
-    }
-
-    pendingHeartbeatRef = makeRef();
-    push(
-        topic: 'phoenix',
-        event: ChannelEvents.heartbeat,
-        payload: {},
-        ref: pendingHeartbeatRef);
-  }
-
-  void flushSendBuffer() {
-    if (isConnected() && sendBuffer.isNotEmpty) {
-      for (final callback in sendBuffer) {
-        callback();
-      }
-      sendBuffer = [];
-    }
   }
 
   void onConnMessage(String rawMessage) {
@@ -326,5 +251,86 @@ class RealtimeClient {
         callback(msg);
       }
     });
+  }
+
+  void sendHeartbeat() {
+    if (!isConnected()) return;
+
+    if (pendingHeartbeatRef != null) {
+      pendingHeartbeatRef = null;
+      log('transport',
+          'heartbeat timeout. Attempting to re-establish connection');
+      conn.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
+      return;
+    }
+
+    pendingHeartbeatRef = makeRef();
+    final message = Message(
+        topic: 'phoenix',
+        event: ChannelEvents.heartbeat,
+        payload: {},
+        ref: pendingHeartbeatRef);
+    push(message);
+  }
+
+  void _onConnOpen() {
+    log('transport', 'connected to ${endPointURL()}');
+    _flushSendBuffer();
+    reconnectTimer.reset();
+    if (heartbeatTimer != null) heartbeatTimer.cancel();
+    heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs),
+        (Timer t) => sendHeartbeat());
+    for (final callback in stateChangeCallbacks['open']) {
+      callback();
+    }
+  }
+
+  /// communication has been closed
+  void _onConnClose(String event) {
+    log('transport', 'close', event);
+    /// SocketStates.disconnected: by user with socket.disconnect()
+    /// SocketStates.closed: NOT by user, should try to reconnect
+    if (connState == SocketStates.closed) {
+      _triggerChanError();
+      if (heartbeatTimer != null) heartbeatTimer.cancel();
+      reconnectTimer.scheduleTimeout();
+    }
+    for (final callback in stateChangeCallbacks['close']) {
+      callback(event);
+    }
+  }
+
+  void _onConnError(dynamic error) {
+    log('transport', error.toString());
+    _triggerChanError();
+    for (final callback in stateChangeCallbacks['error']) {
+      callback(error);
+    }
+  }
+
+  void _triggerChanError() {
+    for (final channel in channels) {
+      channel.trigger(ChannelEvents.error.eventName());
+    }
+  }
+
+  String _appendParams(String url, Map<String, dynamic> params) {
+    if (params.keys.isEmpty) return url;
+
+    var endpoint = Uri.parse(url);
+    final searchParams = Map<String, dynamic>.from(endpoint.queryParameters);
+    params.forEach((k, v) => searchParams[k] = v);
+    endpoint = endpoint.replace(queryParameters: searchParams);
+
+    return endpoint.toString();
+  }
+
+  void _flushSendBuffer() {
+    if (isConnected() && sendBuffer.isNotEmpty) {
+      for (final callback in sendBuffer) {
+        callback();
+      }
+      sendBuffer = [];
+    }
   }
 }

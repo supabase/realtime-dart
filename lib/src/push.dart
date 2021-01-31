@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'constants.dart';
+import 'message.dart';
 import 'realtime_subscription.dart';
 
 typedef Callback = void Function(dynamic response);
@@ -45,12 +46,8 @@ class Push {
 
     startTimeout();
     sent = true;
-    _channel.socket.push(
-      topic: _channel.topic,
-      event: _event,
-      payload: payload,
-      ref: ref,
-    );
+    final message = Message(topic: _channel.topic, payload: payload, event: _event, ref: ref);
+    _channel.socket.push(message);
   }
 
   Push receive(String status, Callback callback) {

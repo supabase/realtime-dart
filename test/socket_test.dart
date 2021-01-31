@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:mockito/mockito.dart';
 import 'package:realtime_client/src/constants.dart';
+import 'package:realtime_client/src/message.dart';
 import 'package:test/test.dart';
 import 'package:realtime_client/realtime_client.dart';
 import 'package:web_socket_channel/io.dart';
@@ -317,7 +318,8 @@ void main() {
       mockedSocket.connect();
       mockedSocket.connState = SocketStates.open;
 
-      mockedSocket.push(topic: topic, payload: payload, event: event, ref: ref);
+      final message = Message(topic: topic, payload: payload, event: event, ref: ref);
+      mockedSocket.push(message);
 
       verify(mockedSink.add(jsonData));
     });
@@ -328,7 +330,8 @@ void main() {
 
       expect(mockedSocket.sendBuffer.length, 0);
 
-      mockedSocket.push(topic: topic, payload: payload, event: event, ref: ref);
+      final message = Message(topic: topic, payload: payload, event: event, ref: ref);
+      mockedSocket.push(message);
 
       verifyNever(mockedSink.add(jsonData));
       expect(mockedSocket.sendBuffer.length, 1);

@@ -5,6 +5,13 @@ import 'retry_timer.dart';
 
 typedef Callback = void Function(dynamic payload, {String ref});
 
+class Binding {
+  String event;
+  Callback callback;
+
+  Binding(this.event, this.callback);
+}
+
 class RealtimeSubscription {
   ChannelStates _state = ChannelStates.closed;
   final String topic;
@@ -116,7 +123,7 @@ class RealtimeSubscription {
   ///
   /// To receive leave acknowledgements, use the a `receive` hook to bind to the server ack,
   /// ```dart
-  /// channel.unsubscribe().receive("ok", () => alert("left!") )
+  /// channel.unsubscribe().receive("ok", (_){print("left!");} );
   /// ```
   Push unsubscribe({Duration timeout}) {
     void onClose() {
@@ -202,11 +209,4 @@ class RealtimeSubscription {
   bool isLeaving() {
     return _state == ChannelStates.leaving;
   }
-}
-
-class Binding {
-  String event;
-  Callback callback;
-
-  Binding(this.event, this.callback);
 }
