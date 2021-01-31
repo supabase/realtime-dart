@@ -5,9 +5,9 @@ import 'dart:core';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-import 'channel.dart';
-import 'lib/constants.dart';
-import 'lib/retry_timer.dart';
+import 'constants.dart';
+import 'realtime_subscription.dart';
+import 'retry_timer.dart';
 
 typedef Logger = void Function(String kind, String msg, dynamic data);
 typedef Encoder = void Function(
@@ -17,8 +17,8 @@ typedef Decoder = void Function(
 typedef WebSocketChannelProvider = WebSocketChannel Function(
     String url, Map<String, String> headers);
 
-class Socket {
-  List<Channel> channels = [];
+class RealtimeClient {
+  List<RealtimeSubscription> channels = [];
   final String endPoint;
   final Map<String, String> headers;
   final Map<String, String> params;
@@ -57,7 +57,7 @@ class Socket {
   /// `decode` The function to decode incoming messages. Defaults to JSON: (payload, callback) => callback(JSON.parse(payload))
   /// `longpollerTimeout` The maximum timeout of a long poll AJAX request. Defaults to 20s (double the server long poll timer).
   /// `reconnectAfterMs` he optional function that returns the millsec reconnect interval. Defaults to stepped backoff off.
-  Socket(
+  RealtimeClient(
     String endPoint, {
     WebSocketChannelProvider transport,
     this.encode,
@@ -234,12 +234,12 @@ class Socket {
     return connectionState() == 'open';
   }
 
-  void remove(Channel channel) {
+  void remove(RealtimeSubscription channel) {
     channels = channels.where((c) => c.joinRef() != channel.joinRef()).toList();
   }
 
-  Channel channel(String topic, {Map chanParams = const {}}) {
-    final chan = Channel(topic, this, params: chanParams);
+  RealtimeSubscription channel(String topic, {Map chanParams = const {}}) {
+    final chan = RealtimeSubscription(topic, this, params: chanParams);
     channels.add(chan);
     return chan;
   }

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:mockito/mockito.dart';
-import 'package:realtime_client/src/lib/constants.dart';
+import 'package:realtime_client/src/constants.dart';
 import 'package:test/test.dart';
 import 'package:realtime_client/realtime_client.dart';
 import 'package:web_socket_channel/io.dart';
@@ -34,13 +34,14 @@ void main() {
     if (mockServer != null) {
       await mockServer.close();
     } else {
+      // ignore: avoid_print
       print('mock server was null');
     }
   });
 
   group('constructor', () {
     test('sets defaults', () async {
-      final socket = Socket('wss://example.com/socket');
+      final socket = RealtimeClient('wss://example.com/socket');
       expect(socket.channels.length, 0);
       expect(socket.sendBuffer.length, 0);
       expect(socket.ref, 0);
@@ -60,10 +61,11 @@ void main() {
     });
 
     test('overrides some defaults with options', () async {
-      final socket = Socket('wss://example.com/socket',
+      final socket = RealtimeClient('wss://example.com/socket',
           timeout: const Duration(milliseconds: 40000),
           longpollerTimeout: 50000,
           heartbeatIntervalMs: 60000,
+          // ignore: avoid_print
           logger: (kind, msg, data) => print('[$kind] $msg $data'));
       expect(socket.channels.length, 0);
       expect(socket.sendBuffer.length, 0);
@@ -86,7 +88,7 @@ void main() {
 
   group('endpointURL', () {
     test('returns endpoint for given full url', () {
-      final socket = Socket('wss://example.org/chat');
+      final socket = RealtimeClient('wss://example.org/chat');
       expect(
         socket.endPointURL(),
         'wss://example.org/chat/websocket?vsn=1.0.0',
@@ -94,24 +96,24 @@ void main() {
     });
 
     test('returns endpoint with parameters', () {
-      final socket = Socket('ws://example.org/chat', params: {'foo': 'bar'});
+      final socket = RealtimeClient('ws://example.org/chat', params: {'foo': 'bar'});
       expect(socket.endPointURL(),
           'ws://example.org/chat/websocket?foo=bar&vsn=1.0.0');
     });
 
     test('returns endpoint with apikey', () {
       final socket =
-          Socket('ws://example.org/chat', params: {'apikey': '123456789'});
+          RealtimeClient('ws://example.org/chat', params: {'apikey': '123456789'});
       expect(socket.endPointURL(),
           'ws://example.org/chat/websocket?apikey=123456789&vsn=1.0.0');
     });
   });
 
   group('connect with Websocket', () {
-    Socket socket;
+    RealtimeClient socket;
 
     setUp(() {
-      socket = Socket('ws://localhost:${mockServer.port}');
+      socket = RealtimeClient('ws://localhost:${mockServer.port}');
     });
     test('establishes websocket connection with endpoint', () {
       socket.connect();
@@ -151,7 +153,7 @@ void main() {
 
     test('sets callback for errors', () {
       dynamic lastErr;
-      Socket erroneousSocket = Socket('badurl')
+      final RealtimeClient erroneousSocket = RealtimeClient('badurl')
         ..onError((e) {
           lastErr = e;
         });
@@ -170,9 +172,9 @@ void main() {
   });
 
   group('disconnect', () {
-    Socket socket;
+    RealtimeClient socket;
     setUp(() {
-      socket = Socket(socketEndpoint);
+      socket = RealtimeClient(socketEndpoint);
     });
     test('removes existing connection', () {
       socket.connect();
@@ -193,7 +195,7 @@ void main() {
 
     test('calls connection close callback', () {
       final mockedSocketChannel = MockIOWebSocketChannel();
-      final mockedSocket = Socket(
+      final mockedSocket = RealtimeClient(
         socketEndpoint,
         transport: (url, headers) {
           return mockedSocketChannel;
@@ -223,9 +225,9 @@ void main() {
   group('channel', () {
     const tTopic = 'topic';
     const tParams = {'one': 'two'};
-    Socket socket;
+    RealtimeClient socket;
     setUp(() {
-      socket = Socket(socketEndpoint);
+      socket = RealtimeClient(socketEndpoint);
     });
 
     test('returns channel with given topic and params', () {
@@ -266,7 +268,7 @@ void main() {
       const tTopic2 = 'topic-2';
 
       final mockedSocket = SocketWithMockedChannel(socketEndpoint);
-      mockedSocket.mockedChannelLooker.addAll(<String, Channel>{
+      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeSubscription>{
         tTopic1: mockedChannel1,
         tTopic2: mockedChannel2,
       });
@@ -295,12 +297,12 @@ void main() {
     });
 
     IOWebSocketChannel mockedSocketChannel;
-    Socket mockedSocket;
+    RealtimeClient mockedSocket;
     WebSocketSink mockedSink;
 
     setUp(() {
       mockedSocketChannel = MockIOWebSocketChannel();
-      mockedSocket = Socket(
+      mockedSocket = RealtimeClient(
         socketEndpoint,
         transport: (url, headers) {
           return mockedSocketChannel;
@@ -338,9 +340,9 @@ void main() {
   });
 
   group('makeRef', () {
-    Socket socket;
+    RealtimeClient socket;
     setUp(() {
-      socket = Socket(socketEndpoint);
+      socket = RealtimeClient(socketEndpoint);
     });
 
     test('returns next message ref', () {
@@ -360,7 +362,7 @@ void main() {
 
   group('sendHeartbeat', () {
     IOWebSocketChannel mockedSocketChannel;
-    Socket mockedSocket;
+    RealtimeClient mockedSocket;
     WebSocketSink mockedSink;
     final data = json.encode({
       'topic': 'phoenix',
@@ -371,7 +373,7 @@ void main() {
 
     setUp(() {
       mockedSocketChannel = MockIOWebSocketChannel();
-      mockedSocket = Socket(
+      mockedSocket = RealtimeClient(
         socketEndpoint,
         transport: (url, headers) {
           return mockedSocketChannel;

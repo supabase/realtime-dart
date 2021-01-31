@@ -1,15 +1,15 @@
-import 'lib/constants.dart';
-import 'lib/push.dart';
-import 'lib/retry_timer.dart';
-import 'socket.dart';
+import 'constants.dart';
+import 'push.dart';
+import 'realtime_client.dart';
+import 'retry_timer.dart';
 
 typedef Callback = void Function(dynamic payload, {String ref});
 
-class Channel {
+class RealtimeSubscription {
   ChannelStates _state = ChannelStates.closed;
   final String topic;
   final Map<dynamic, dynamic> params;
-  final Socket socket;
+  final RealtimeClient socket;
   RetryTimer _rejoinTimer;
   List<Push> _pushBuffer = [];
   List<Binding> _bindings = [];
@@ -17,7 +17,7 @@ class Channel {
   Push _joinPush;
   final Duration _timeout;
 
-  Channel(this.topic, this.socket, {this.params = const {}}) : _timeout = socket.timeout {
+  RealtimeSubscription(this.topic, this.socket, {this.params = const {}}) : _timeout = socket.timeout {
     _joinPush = Push(this, ChannelEvents.join, params, _timeout);
     _rejoinTimer = RetryTimer(() => rejoinUntilConnected(), socket.reconnectAfterMs);
     _joinPush.receive('ok', (response) {

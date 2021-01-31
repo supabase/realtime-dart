@@ -1,3 +1,3 @@
-export 'src/channel.dart';
-export 'src/socket.dart';
+export 'src/realtime_client.dart';
+export 'src/realtime_subscription.dart';
 export 'src/transformers.dart';

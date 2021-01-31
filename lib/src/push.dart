@@ -1,13 +1,13 @@
 import 'dart:async';
 
-import '../channel.dart';
 import 'constants.dart';
+import 'realtime_subscription.dart';
 
 typedef Callback = void Function(dynamic response);
 
 /// Push event obj
 class Push {
-  final Channel _channel;
+  final RealtimeSubscription _channel;
   final ChannelEvents _event;
   String _ref;
   String _refEvent;
