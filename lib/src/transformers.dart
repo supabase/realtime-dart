@@ -41,6 +41,8 @@ class Column {
 
   /// the type modifier. eg: 4294967295
   int typeModifier;
+
+  Column(this.name, this.type, {this.flags, this.typeModifier});
 }
 
 /// Takes an array of columns and an object of string values then converts each string value
@@ -54,12 +56,19 @@ class Column {
 /// convertChangeData([{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], {first_name: 'Paul', age:'33'}, {})
 /// => { first_name: 'Paul', age: 33 }
 /// ```
-Map convertChangeData(List<Column> columns, Map<String, String> records, {List<String> skipTypes}) {
+Map convertChangeData(List<Map<String, String>> columns, Map<String, String> records, {List<String> skipTypes}) {
   final result = <String, dynamic>{};
   final _skipTypes = skipTypes ?? [];
+  final parsedColumns = <Column>[];
+
+  for (final element in columns) {
+    final name = element['name'];
+    final type = element['type'];
+    if (name != null && type != null) parsedColumns.add(Column(name, type));
+  }
 
   records.forEach((key, value) {
-    result[key] = convertColumn(key, columns, records, _skipTypes);
+    result[key] = convertColumn(key, parsedColumns, records, _skipTypes);
   });
   return result;
 }
