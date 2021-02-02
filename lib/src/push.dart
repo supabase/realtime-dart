@@ -12,7 +12,7 @@ class Push {
   final ChannelEvents _event;
   String _ref;
   String _refEvent;
-  final Map<dynamic, dynamic> payload;
+  final Map<String, dynamic> payload;
   dynamic _receivedResp;
   Duration _timeout;
   Timer _timeoutTimer;

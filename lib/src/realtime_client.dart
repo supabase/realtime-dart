@@ -189,7 +189,7 @@ class RealtimeClient {
     channels = channels.where((c) => c.joinRef() != channel.joinRef()).toList();
   }
 
-  RealtimeSubscription channel(String topic, {Map chanParams = const {}}) {
+  RealtimeSubscription channel(String topic, {Map<String, dynamic> chanParams = const {}}) {
     final chan = RealtimeSubscription(topic, this, params: chanParams);
     channels.add(chan);
     return chan;

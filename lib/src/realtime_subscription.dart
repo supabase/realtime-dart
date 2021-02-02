@@ -15,7 +15,7 @@ class Binding {
 class RealtimeSubscription {
   ChannelStates _state = ChannelStates.closed;
   final String topic;
-  final Map<dynamic, dynamic> params;
+  final Map<String, dynamic> params;
   final RealtimeClient socket;
   RetryTimer _rejoinTimer;
   List<Push> _pushBuffer = [];

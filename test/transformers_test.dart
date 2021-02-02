@@ -35,4 +35,10 @@ void main() {
           DateTime(2020, 11, 1, 1, 23, 45)
         ]));
   });
+
+  test('transformers convertChangeData', () {
+    final columns = [{'name': 'first_name', 'type': 'text'}, {'name': 'age', 'type': 'int4'}];
+    final records = {'first_name': 'Paul', 'age':'33'};
+    expect(convertChangeData(columns, records), { 'first_name': 'Paul', 'age': 33 });
+  });
 }
