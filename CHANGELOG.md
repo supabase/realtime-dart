@@ -1,3 +1,12 @@
+## [0.0.1]
+
+chore: update README
+fix: convertChangeData columns param type
+
+## [0.0.1-dev.5]
+
+- fix: transformers convertChangeData method
+
 ## [0.0.1-dev.4]
 
 - Improve docs
