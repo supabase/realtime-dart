@@ -1,7 +1,12 @@
+## [0.0.2]
+
+- chore: replace `Map` with `Map<String, dyanmic>`
+- tidy up
+
 ## [0.0.1]
 
-chore: update README
-fix: convertChangeData columns param type
+- chore: update README
+- fix: convertChangeData columns param type
 
 ## [0.0.1-dev.5]
 
