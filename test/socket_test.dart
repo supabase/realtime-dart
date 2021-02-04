@@ -11,7 +11,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'socket_test_stubs.dart';
 
-typedef IOWebSocketChannelClosure = IOWebSocketChannel Function(
+typedef WebSocketChannelClosure = WebSocketChannel Function(
     String url, Map<String, String> headers);
 
 void main() {
@@ -53,7 +53,7 @@ void main() {
         'error': [],
         'message': [],
       });
-      expect(socket.transport is IOWebSocketChannelClosure, true);
+      expect(socket.transport is WebSocketChannelClosure, true);
       expect(socket.timeout, const Duration(milliseconds: 10000));
       expect(socket.longpollerTimeout, 20000);
       expect(socket.heartbeatIntervalMs, 30000);
@@ -78,7 +78,7 @@ void main() {
         'error': [],
         'message': [],
       });
-      expect(socket.transport is IOWebSocketChannelClosure, true);
+      expect(socket.transport is WebSocketChannelClosure, true);
       expect(socket.timeout, const Duration(milliseconds: 40000));
       expect(socket.longpollerTimeout, 50000);
       expect(socket.heartbeatIntervalMs, 60000);
@@ -97,14 +97,15 @@ void main() {
     });
 
     test('returns endpoint with parameters', () {
-      final socket = RealtimeClient('ws://example.org/chat', params: {'foo': 'bar'});
+      final socket =
+          RealtimeClient('ws://example.org/chat', params: {'foo': 'bar'});
       expect(socket.endPointURL(),
           'ws://example.org/chat/websocket?foo=bar&vsn=1.0.0');
     });
 
     test('returns endpoint with apikey', () {
-      final socket =
-          RealtimeClient('ws://example.org/chat', params: {'apikey': '123456789'});
+      final socket = RealtimeClient('ws://example.org/chat',
+          params: {'apikey': '123456789'});
       expect(socket.endPointURL(),
           'ws://example.org/chat/websocket?apikey=123456789&vsn=1.0.0');
     });
@@ -318,7 +319,8 @@ void main() {
       mockedSocket.connect();
       mockedSocket.connState = SocketStates.open;
 
-      final message = Message(topic: topic, payload: payload, event: event, ref: ref);
+      final message =
+          Message(topic: topic, payload: payload, event: event, ref: ref);
       mockedSocket.push(message);
 
       verify(mockedSink.add(jsonData));
@@ -330,7 +332,8 @@ void main() {
 
       expect(mockedSocket.sendBuffer.length, 0);
 
-      final message = Message(topic: topic, payload: payload, event: event, ref: ref);
+      final message =
+          Message(topic: topic, payload: payload, event: event, ref: ref);
       mockedSocket.push(message);
 
       verifyNever(mockedSink.add(jsonData));
