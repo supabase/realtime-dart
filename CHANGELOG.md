@@ -1,3 +1,7 @@
+## [0.0.3]
+
+- fix: Web compatibility
+
 ## [0.0.2]
 
 - chore: replace `Map` with `Map<String, dyanmic>`
