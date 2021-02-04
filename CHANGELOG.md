@@ -13,7 +13,6 @@
 ## [0.0.3]
 
 - fix: binding filter bug on realtimeSubscription trigger method
->>>>>>> origin/main
 
 ## [0.0.2]
 
