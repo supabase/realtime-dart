@@ -36,9 +36,43 @@ void main() {
         ]));
   });
 
-  test('transformers convertChangeData', () {
-    final columns = [{'name': 'first_name', 'type': 'text'}, {'name': 'age', 'type': 'int4'}];
-    final records = {'first_name': 'Paul', 'age':'33'};
-    expect(convertChangeData(columns, records), { 'first_name': 'Paul', 'age': 33 });
+  test('transformers convertChangeData on delete', () {
+    final columns = [
+      {
+        'flags': ['key'],
+        'name': 'id',
+        'type': 'int8',
+        'type_modifier': 4294967295
+      },
+      {'flags': [], 'name': 'name', 'type': 'text', 'type_modifier': 4294967295}
+    ];
+    final Map<String, dynamic> records = {};
+    expect(convertChangeData(columns, records), {});
+  });
+
+  test('transformers convertChangeData on insert', () {
+    final columns = [
+      {
+        'flags': ['key'],
+        'name': 'id',
+        'type': 'int8',
+        'type_modifier': 4294967295
+      },
+      {
+        'flags': [],
+        'name': 'name',
+        'type': 'text',
+        'type_modifier': 4294967295
+      },
+      {
+        'flags': [],
+        'name': 'continent',
+        'type': 'continents',
+        'type_modifier': 4294967295
+      }
+    ];
+    final records = {'id': 253, 'name': 'Singapore', 'continent': null};
+    expect(convertChangeData(columns, records),
+        {'id': 253, 'name': 'Singapore', 'continent': null});
   });
 }

@@ -56,14 +56,16 @@ class Column {
 /// convertChangeData([{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], {first_name: 'Paul', age:'33'}, {})
 /// => { first_name: 'Paul', age: 33 }
 /// ```
-Map convertChangeData(List<Map<String, String>> columns, Map<String, String> records, {List<String> skipTypes}) {
+Map convertChangeData(
+    List<Map<String, dynamic>> columns, Map<String, dynamic> records,
+    {List<String> skipTypes}) {
   final result = <String, dynamic>{};
   final _skipTypes = skipTypes ?? [];
   final parsedColumns = <Column>[];
 
   for (final element in columns) {
-    final name = element['name'];
-    final type = element['type'];
+    final name = element['name'] as String;
+    final type = element['type'] as String;
     if (name != null && type != null) parsedColumns.add(Column(name, type));
   }
 
@@ -86,12 +88,21 @@ Map convertChangeData(List<Map<String, String>> columns, Map<String, String> rec
 /// convertColumn('age', [{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], ['Paul', '33'], ['int4'])
 /// => "33"
 /// ```
-dynamic convertColumn(String columnName, List<Column> columns, Map<String, String> records, List<String> skipTypes) {
-  final column = columns.firstWhere((x) => x.name == columnName, orElse: () => null);
+dynamic convertColumn(String columnName, List<Column> columns,
+    Map<String, dynamic> records, List<String> skipTypes) {
+  final column =
+      columns.firstWhere((x) => x.name == columnName, orElse: () => null);
+  final columnValue = records[columnName];
+  final columnValueStr = columnValue == null
+      ? null
+      : columnValue is String
+          ? columnValue
+          : columnValue.toString();
+
   if (column == null || skipTypes.contains(column.type)) {
-    return noop(records[columnName]);
+    return noop(columnValueStr);
   } else {
-    return convertCell(column.type, records[columnName]);
+    return convertCell(column.type, columnValueStr);
   }
 }
 
@@ -119,7 +130,9 @@ dynamic convertCell(String type, String stringValue) {
       return toArray(stringValue, arrayValue);
     }
 
-    final typeEnum = PostgresTypes.values.firstWhere((e) => e.toString() == 'PostgresTypes.$type', orElse: () => null);
+    final typeEnum = PostgresTypes.values.firstWhere(
+        (e) => e.toString() == 'PostgresTypes.$type',
+        orElse: () => null);
     // If not null, convert to correct type.
     switch (typeEnum) {
       case PostgresTypes.abstime:
@@ -193,7 +206,8 @@ List<dynamic> toArray(String type, String stringValue) {
 
   // converts the string into an array
   // if string is empty (meaning the array was empty), an empty array will be immediately returned
-  final stringArray = stringEnriched.isNotEmpty ? stringEnriched.split(',') : <String>[];
+  final stringArray =
+      stringEnriched.isNotEmpty ? stringEnriched.split(',') : <String>[];
   final array = stringArray.map((string) => convertCell(type, string)).toList();
   return array;
 }

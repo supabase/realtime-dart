@@ -1,6 +1,19 @@
-## [0.0.3]
+## [0.0.6]
 
 - fix: Web compatibility
+
+## [0.0.5]
+
+- fix: transformers.convertColumn method
+
+## [0.0.4]
+
+- fix: convertChangeData.columns type to List<Map<String, dynamic>>
+
+## [0.0.3]
+
+- fix: binding filter bug on realtimeSubscription trigger method
+>>>>>>> origin/main
 
 ## [0.0.2]
 
@@ -21,8 +34,9 @@
 - Improve docs
 
 #### BREAKING CHANGES
-  - Rename `socket` to `RealtimeClient`
-  - Rename `channel` to `RealtimeSubscription`
+
+- Rename `socket` to `RealtimeClient`
+- Rename `channel` to `RealtimeSubscription`
 
 ## [0.0.1-dev.3]
 

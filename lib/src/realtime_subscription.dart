@@ -24,9 +24,11 @@ class RealtimeSubscription {
   Push _joinPush;
   final Duration _timeout;
 
-  RealtimeSubscription(this.topic, this.socket, {this.params = const {}}) : _timeout = socket.timeout {
+  RealtimeSubscription(this.topic, this.socket, {this.params = const {}})
+      : _timeout = socket.timeout {
     _joinPush = Push(this, ChannelEvents.join, params, _timeout);
-    _rejoinTimer = RetryTimer(() => rejoinUntilConnected(), socket.reconnectAfterMs);
+    _rejoinTimer =
+        RetryTimer(() => rejoinUntilConnected(), socket.reconnectAfterMs);
     _joinPush.receive('ok', (response) {
       _state = ChannelStates.joined;
       _rejoinTimer.reset();
@@ -61,7 +63,8 @@ class RealtimeSubscription {
       _rejoinTimer.scheduleTimeout();
     });
 
-    on(ChannelEvents.reply.eventName(), (payload, {ref}) => trigger(replyEventName(ref), payload: payload));
+    on(ChannelEvents.reply.eventName(),
+        (payload, {ref}) => trigger(replyEventName(ref), payload: payload));
   }
 
   void rejoinUntilConnected() {
@@ -86,7 +89,8 @@ class RealtimeSubscription {
   }
 
   void onError(Function(String) callback) {
-    on(ChannelEvents.error.eventName(), (reason, {ref}) => callback(reason as String));
+    on(ChannelEvents.error.eventName(),
+        (reason, {ref}) => callback(reason as String));
   }
 
   void on(String event, Callback callback) {
@@ -101,7 +105,8 @@ class RealtimeSubscription {
     return socket.isConnected() && isJoined();
   }
 
-  Push push(ChannelEvents event, Map<String, String> payload, {Duration timeout}) {
+  Push push(ChannelEvents event, Map<String, String> payload,
+      {Duration timeout}) {
     if (!_joinedOnce) {
       throw "tried to push '${event.eventName()}' to '$topic' before joining. Use channel.subscribe() before pushing events";
     }
@@ -128,12 +133,15 @@ class RealtimeSubscription {
   Push unsubscribe({Duration timeout}) {
     void onClose() {
       socket.log('channel', 'leave $topic');
-      trigger(ChannelEvents.close.eventName(), payload: 'leave', ref: joinRef());
+      trigger(ChannelEvents.close.eventName(),
+          payload: 'leave', ref: joinRef());
     }
-    
+
     _state = ChannelStates.leaving;
     final leavePush = Push(this, ChannelEvents.leave, {}, timeout ?? _timeout);
-    leavePush.receive('ok', (_) => onClose()).receive('timeout', (_) => onClose());
+    leavePush
+        .receive('ok', (_) => onClose())
+        .receive('timeout', (_) => onClose());
     leavePush.send();
     if (!canPush()) {
       leavePush.trigger('ok', {});
@@ -171,19 +179,26 @@ class RealtimeSubscription {
   }
 
   void trigger(String event, {dynamic payload, String ref}) {
-    final events = [ChannelEvents.close, ChannelEvents.error, ChannelEvents.leave, ChannelEvents.join]
-        .map((e) => e.eventName())
-        .toSet();
+    final events = [
+      ChannelEvents.close,
+      ChannelEvents.error,
+      ChannelEvents.leave,
+      ChannelEvents.join
+    ].map((e) => e.eventName()).toSet();
 
     if (ref != null && events.contains(event) && ref != joinRef()) {
       return;
     }
+
     final handledPayload = onMessage(event, payload, ref: ref);
     if (payload != null && handledPayload == null) {
       throw 'channel onMessage callbacks must return the payload, modified or unmodified';
     }
 
-    _bindings.where((bind) => bind.event == event).map((bind) => bind.callback(handledPayload, ref: ref));
+    final filtered = _bindings.where((bind) => bind.event == event);
+    for (final bind in filtered) {
+      bind.callback(handledPayload, ref: ref);
+    }
   }
 
   String replyEventName(String ref) {
