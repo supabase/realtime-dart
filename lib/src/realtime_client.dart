@@ -2,13 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
-import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'constants.dart';
 import 'message.dart';
 import 'realtime_subscription.dart';
 import 'retry_timer.dart';
+import 'websocket_stub.dart'
+    if (dart.library.io) 'websocket_io.dart'
+    if (dart.library.html) 'websocket_web.dart';
 
 typedef Logger = void Function(String kind, String msg, dynamic data);
 typedef Encoder = void Function(
@@ -71,9 +73,7 @@ class RealtimeClient {
     this.params = const {},
     this.headers = const {},
   })  : endPoint = '$endPoint/${Transports.websocket}',
-        transport = (transport ??
-            (url, headers) =>
-                IOWebSocketChannel.connect(url, headers: headers)) {
+        transport = transport ?? createWebSocketClient {
     this.reconnectAfterMs = reconnectAfterMs ??
         (int tries) {
           return [1000, 2000, 5000, 10000][tries - 1] ?? 10000;
@@ -189,7 +189,8 @@ class RealtimeClient {
     channels = channels.where((c) => c.joinRef() != channel.joinRef()).toList();
   }
 
-  RealtimeSubscription channel(String topic, {Map<String, dynamic> chanParams = const {}}) {
+  RealtimeSubscription channel(String topic,
+      {Map<String, dynamic> chanParams = const {}}) {
     final chan = RealtimeSubscription(topic, this, params: chanParams);
     channels.add(chan);
     return chan;
@@ -203,7 +204,8 @@ class RealtimeClient {
       });
     }
 
-    log('push', '${message.topic} ${message.event} (${message.ref})', message.payload);
+    log('push', '${message.topic} ${message.event} (${message.ref})',
+        message.payload);
 
     if (isConnected()) {
       callback();
@@ -288,6 +290,7 @@ class RealtimeClient {
   /// communication has been closed
   void _onConnClose(String event) {
     log('transport', 'close', event);
+
     /// SocketStates.disconnected: by user with socket.disconnect()
     /// SocketStates.closed: NOT by user, should try to reconnect
     if (connState == SocketStates.closed) {
