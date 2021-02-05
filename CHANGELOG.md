@@ -1,6 +1,10 @@
-## [0.0.6]
+## [0.0.7]
 
 - fix: Web compatibility
+  
+## [0.0.6]
+
+- fix: RetryTimer `_tries` is not initialized
 
 ## [0.0.5]
 

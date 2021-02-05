@@ -23,7 +23,7 @@ class RetryTimer {
   final TimerCalculation timerCalc;
 
   Timer _timer;
-  int _tries;
+  int _tries = 0;
 
   RetryTimer(this.callback, this.timerCalc);
 
