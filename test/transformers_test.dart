@@ -36,21 +36,7 @@ void main() {
         ]));
   });
 
-  test('transformers convertChangeData on delete', () {
-    final columns = [
-      {
-        'flags': ['key'],
-        'name': 'id',
-        'type': 'int8',
-        'type_modifier': 4294967295
-      },
-      {'flags': [], 'name': 'name', 'type': 'text', 'type_modifier': 4294967295}
-    ];
-    final Map<String, dynamic> records = {};
-    expect(convertChangeData(columns, records), {});
-  });
-
-  test('transformers convertChangeData on insert', () {
+  test('transformers convertChangeData', () {
     final columns = [
       {
         'flags': ['key'],
