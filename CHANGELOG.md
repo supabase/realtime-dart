@@ -1,3 +1,7 @@
+## [0.0.6]
+
+- fix: RetryTimer `_tries` is not initialized
+
 ## [0.0.5]
 
 - fix: transformers.convertColumn method
