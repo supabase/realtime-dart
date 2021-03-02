@@ -10,14 +10,14 @@ typedef Callback = void Function(dynamic response);
 class Push {
   final RealtimeSubscription _channel;
   final ChannelEvents _event;
-  String _ref;
-  String _refEvent;
+  String? _ref;
+  String? _refEvent;
   final Map<String, dynamic> payload;
   dynamic _receivedResp;
   Duration _timeout;
-  Timer _timeoutTimer;
+  Timer? _timeoutTimer;
   final List<Hook> _recHooks = [];
-  bool sent;
+  bool sent = false;
 
   /// Initializes the Push
   ///
@@ -25,9 +25,10 @@ class Push {
   /// `event` The event, for example `"phx_join"`
   /// `payload` The payload, for example `{user_id: 123}`
   /// `timeout` The push timeout in milliseconds
-  Push(this._channel, this._event, [this.payload = const {}, this._timeout = Constants.defaultTimeout]);
+  Push(this._channel, this._event,
+      [this.payload = const {}, this._timeout = Constants.defaultTimeout]);
 
-  String get ref => _ref;
+  String? get ref => _ref;
 
   Duration get timeout => _timeout;
 
@@ -46,7 +47,8 @@ class Push {
 
     startTimeout();
     sent = true;
-    final message = Message(topic: _channel.topic, payload: payload, event: _event, ref: ref);
+    final message = Message(
+        topic: _channel.topic, payload: payload, event: _event, ref: ref);
     _channel.socket.push(message);
   }
 
@@ -63,9 +65,10 @@ class Push {
     if (_timeoutTimer == null) return;
 
     _ref = _channel.socket.makeRef();
-    _refEvent = _channel.replyEventName(ref);
+    final event = _channel.replyEventName(ref);
+    _refEvent = event;
 
-    _channel.on(_refEvent, (dynamic payload, {ref}) {
+    _channel.on(event, (dynamic payload, {ref}) {
       cancelRefEvent();
       cancelTimeout();
       _receivedResp = payload;
@@ -79,7 +82,7 @@ class Push {
 
   void trigger(String status, dynamic response) {
     if (_refEvent != null) {
-      _channel.trigger(_refEvent, payload: {
+      _channel.trigger(_refEvent!, payload: {
         'status': status,
         'response': response,
       });
@@ -90,16 +93,18 @@ class Push {
     if (_refEvent == null) {
       return;
     }
-    _channel.off(_refEvent);
+    _channel.off(_refEvent!);
   }
 
   void cancelTimeout() {
-    _timeoutTimer.cancel();
+    _timeoutTimer!.cancel();
     _timeoutTimer = null;
   }
 
   void matchReceive(String status, dynamic response) {
-    _recHooks.where((h) => h.status == status).forEach((h) => h.callback(response));
+    _recHooks
+        .where((h) => h.status == status)
+        .forEach((h) => h.callback(response));
   }
 
   bool _hasReceived(String status) {

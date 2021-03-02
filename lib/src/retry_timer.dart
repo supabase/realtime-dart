@@ -22,7 +22,7 @@ class RetryTimer {
   final TimerCallback callback;
   final TimerCalculation timerCalc;
 
-  Timer _timer;
+  Timer? _timer;
   int _tries = 0;
 
   RetryTimer(this.callback, this.timerCalc);
@@ -30,12 +30,12 @@ class RetryTimer {
   /// Cancels any previous timer and reset tries
   void reset() {
     _tries = 0;
-    if (_timer != null) _timer.cancel();
+    if (_timer != null) _timer!.cancel();
   }
 
   /// Cancels any previous scheduleTimeout and schedules callback
   void scheduleTimeout() {
-    if (_timer != null) _timer.cancel();
+    if (_timer != null) _timer!.cancel();
 
     _timer = Timer(Duration(milliseconds: timerCalc(_tries + 1)), () {
       _tries = _tries + 1;

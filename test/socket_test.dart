@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:mockito/mockito.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
 import 'package:test/test.dart';
@@ -19,7 +19,7 @@ void main() {
 
   const socketEndpoint = 'wss://localhost:0/';
 
-  HttpServer mockServer;
+  late HttpServer mockServer;
 
   setUp(() async {
     mockServer = await HttpServer.bind('localhost', 0);
@@ -32,12 +32,7 @@ void main() {
   });
 
   tearDown(() async {
-    if (mockServer != null) {
-      await mockServer.close();
-    } else {
-      // ignore: avoid_print
-      print('mock server was null');
-    }
+    await mockServer.close();
   });
 
   group('constructor', () {
@@ -112,7 +107,7 @@ void main() {
   });
 
   group('connect with Websocket', () {
-    RealtimeClient socket;
+    late RealtimeClient socket;
 
     setUp(() {
       socket = RealtimeClient('ws://localhost:${mockServer.port}');
@@ -135,7 +130,7 @@ void main() {
       socket.onClose((_) {
         closes += 1;
       });
-      dynamic lastMsg;
+      late dynamic lastMsg;
       socket.onMessage((m) {
         lastMsg = m;
       });
@@ -174,7 +169,7 @@ void main() {
   });
 
   group('disconnect', () {
-    RealtimeClient socket;
+    late RealtimeClient socket;
     setUp(() {
       socket = RealtimeClient(socketEndpoint);
     });
@@ -205,16 +200,20 @@ void main() {
       );
       final mockedSink = MockWebSocketSink();
 
-      when(mockedSocketChannel.sink).thenReturn(mockedSink);
+      when(mockedSocketChannel).calls(#sink).thenReturn(mockedSink);
+      when(mockedSink).calls(#close).thenReturn(Future.value(null));
 
       const tCode = 12;
       const tReason = 'reason';
 
       mockedSocket.connect();
-
       mockedSocket.disconnect(code: tCode, reason: tReason);
 
-      verify(mockedSink.close(tCode, tReason));
+      final captured = verify(mockedSink)
+          .called(#close)
+          .withArgs(positional: [captureAny, captureAny]).captured;
+      expect(captured.first[0], equals(tCode));
+      expect(captured.first[1], equals(tReason));
     });
 
     test('does not throw when no connection', () {
@@ -227,7 +226,7 @@ void main() {
   group('channel', () {
     const tTopic = 'topic';
     const tParams = {'one': 'two'};
-    RealtimeClient socket;
+    late RealtimeClient socket;
     setUp(() {
       socket = RealtimeClient(socketEndpoint);
     });
@@ -261,10 +260,10 @@ void main() {
   group('remove', () {
     test('removes given channel from channels', () {
       final mockedChannel1 = MockChannel();
-      when(mockedChannel1.joinRef()).thenReturn('1');
+      when(mockedChannel1).calls(#joinRef).thenReturn('1');
 
       final mockedChannel2 = MockChannel();
-      when(mockedChannel2.joinRef()).thenReturn('2');
+      when(mockedChannel2).calls(#joinRef).thenReturn('2');
 
       const tTopic1 = 'topic-1';
       const tTopic2 = 'topic-2';
@@ -299,8 +298,8 @@ void main() {
     });
 
     IOWebSocketChannel mockedSocketChannel;
-    RealtimeClient mockedSocket;
-    WebSocketSink mockedSink;
+    late RealtimeClient mockedSocket;
+    late WebSocketSink mockedSink;
 
     setUp(() {
       mockedSocketChannel = MockIOWebSocketChannel();
@@ -312,41 +311,49 @@ void main() {
       );
       mockedSink = MockWebSocketSink();
 
-      when(mockedSocketChannel.sink).thenReturn(mockedSink);
+      when(mockedSocketChannel).calls(#sink).thenReturn(mockedSink);
     });
 
     test('sends data to connection when connected', () {
       mockedSocket.connect();
       mockedSocket.connState = SocketStates.open;
+      when(mockedSink).calls(#add).thenReturn();
 
       final message =
           Message(topic: topic, payload: payload, event: event, ref: ref);
       mockedSocket.push(message);
 
-      verify(mockedSink.add(jsonData));
+      final captured = verify(mockedSink)
+          .called(#add)
+          .withArgs(positional: [captureAny]).captured;
+      expect(captured.first[0], equals(jsonData));
     });
 
     test('buffers data when not connected', () {
       mockedSocket.connect();
       mockedSocket.connState = SocketStates.connecting;
 
+      when(mockedSink).calls(#add).thenReturn();
       expect(mockedSocket.sendBuffer.length, 0);
 
       final message =
           Message(topic: topic, payload: payload, event: event, ref: ref);
       mockedSocket.push(message);
 
-      verifyNever(mockedSink.add(jsonData));
+      verify(mockedSink).called(#add).never();
       expect(mockedSocket.sendBuffer.length, 1);
 
       final callback = mockedSocket.sendBuffer[0];
       callback();
-      verify(mockedSink.add(jsonData));
+      final captured = verify(mockedSink)
+          .called(#add)
+          .withArgs(positional: [captureAny]).captured;
+      expect(captured.first[0], equals(jsonData));
     });
   });
 
   group('makeRef', () {
-    RealtimeClient socket;
+    late RealtimeClient socket;
     setUp(() {
       socket = RealtimeClient(socketEndpoint);
     });
@@ -368,8 +375,8 @@ void main() {
 
   group('sendHeartbeat', () {
     IOWebSocketChannel mockedSocketChannel;
-    RealtimeClient mockedSocket;
-    WebSocketSink mockedSink;
+    late RealtimeClient mockedSocket;
+    late WebSocketSink mockedSink;
     final data = json.encode({
       'topic': 'phoenix',
       'event': ChannelEvents.heartbeat.eventName(),
@@ -387,7 +394,7 @@ void main() {
       );
       mockedSink = MockWebSocketSink();
 
-      when(mockedSocketChannel.sink).thenReturn(mockedSink);
+      when(mockedSocketChannel).calls(#sink).thenReturn(mockedSink);
 
       mockedSocket.connect();
     });
@@ -397,15 +404,19 @@ void main() {
     test('pushes heartbeat data when connected', () {
       mockedSocket.connState = SocketStates.open;
 
+      when(mockedSink).calls(#add).thenReturn();
       mockedSocket.sendHeartbeat();
-      verify(mockedSink.add(data));
+      final captured = verify(mockedSink)
+          .called(#add)
+          .withArgs(positional: [captureAny]).captured;
+      expect(captured.first[0], equals(data));
     });
 
     test('no ops when not connected', () {
       mockedSocket.connState = SocketStates.connecting;
 
       mockedSocket.sendHeartbeat();
-      verifyNever(mockedSink.add(data));
+      verify(mockedSink).called(#add).never();
     });
   });
 }

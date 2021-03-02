@@ -12,7 +12,7 @@ import 'websocket_stub.dart'
     if (dart.library.io) 'websocket_io.dart'
     if (dart.library.html) 'websocket_web.dart';
 
-typedef Logger = void Function(String kind, String msg, dynamic data);
+typedef Logger = void Function(String? kind, String? msg, dynamic data);
 typedef Encoder = void Function(
     dynamic payload, void Function(String result) callback);
 typedef Decoder = void Function(
@@ -29,15 +29,15 @@ class RealtimeClient {
   final WebSocketChannelProvider transport;
   int heartbeatIntervalMs = 30000;
   int longpollerTimeout = 20000;
-  Timer heartbeatTimer;
-  String pendingHeartbeatRef;
+  Timer? heartbeatTimer;
+  String? pendingHeartbeatRef;
   int ref = 0;
-  RetryTimer reconnectTimer;
-  Logger logger;
-  Encoder encode;
-  Decoder decode;
-  int Function(int) reconnectAfterMs;
-  WebSocketChannel conn;
+  late RetryTimer reconnectTimer;
+  Logger? logger;
+  late Encoder encode;
+  late Decoder decode;
+  late int Function(int) reconnectAfterMs;
+  WebSocketChannel? conn;
   List sendBuffer = [];
   Map<String, List<Function>> stateChangeCallbacks = {
     'open': [],
@@ -45,7 +45,7 @@ class RealtimeClient {
     'error': [],
     'message': []
   };
-  SocketStates connState;
+  SocketStates? connState;
 
   /// Initializes the Socket
   ///
@@ -62,13 +62,13 @@ class RealtimeClient {
   /// `reconnectAfterMs` The optional function that returns the millsec reconnect interval. Defaults to stepped backoff off.
   RealtimeClient(
     String endPoint, {
-    WebSocketChannelProvider transport,
-    this.encode,
-    this.decode,
+    WebSocketChannelProvider? transport,
+    Encoder? encode,
+    Decoder? decode,
     this.timeout = Constants.defaultTimeout,
     this.heartbeatIntervalMs = 30000,
     this.longpollerTimeout = 20000,
-    int Function(int) reconnectAfterMs,
+    int Function(int)? reconnectAfterMs,
     this.logger,
     this.params = const {},
     this.headers = const {},
@@ -76,12 +76,14 @@ class RealtimeClient {
         transport = transport ?? createWebSocketClient {
     this.reconnectAfterMs = reconnectAfterMs ??
         (int tries) {
-          return [1000, 2000, 5000, 10000][tries - 1] ?? 10000;
+          return [1000, 2000, 5000, 10000][tries - 1];
         };
-    encode ??= (dynamic payload, Function(String result) callback) =>
-        callback(json.encode(payload));
-    decode ??= (String payload, Function(dynamic result) callback) =>
-        callback(json.decode(payload));
+    this.encode = encode ??
+        (dynamic payload, Function(String result) callback) =>
+            callback(json.encode(payload));
+    this.decode = decode ??
+        (String payload, Function(dynamic result) callback) =>
+            callback(json.decode(payload));
 
     reconnectTimer = RetryTimer(
         () => {disconnect(callback: () => connect())}, this.reconnectAfterMs);
@@ -93,25 +95,25 @@ class RealtimeClient {
 
     try {
       connState = SocketStates.connecting;
-      conn = transport(endPointURL(), headers);
-      if (conn != null) {
-        connState = SocketStates.open;
-        _onConnOpen();
-        conn.stream.timeout(Duration(milliseconds: longpollerTimeout));
-        conn.stream.listen((message) {
-          // handling of the incoming messages
-          onConnMessage(message as String);
-        }, onError: (error) {
-          // error handling
-          _onConnError(error);
-        }, onDone: () {
-          // communication has been closed
-          if (connState != SocketStates.disconnected) {
-            connState = SocketStates.closed;
-          }
-          _onConnClose('');
-        });
-      }
+      final conn = transport(endPointURL(), headers);
+      this.conn = conn;
+
+      connState = SocketStates.open;
+      _onConnOpen();
+      conn.stream.timeout(Duration(milliseconds: longpollerTimeout));
+      conn.stream.listen((message) {
+        // handling of the incoming messages
+        onConnMessage(message as String);
+      }, onError: (error) {
+        // error handling
+        _onConnError(error);
+      }, onDone: () {
+        // communication has been closed
+        if (connState != SocketStates.disconnected) {
+          connState = SocketStates.closed;
+        }
+        _onConnClose('');
+      });
     } catch (e) {
       /// General error handling
       _onConnError(e);
@@ -119,22 +121,23 @@ class RealtimeClient {
   }
 
   /// Disconnects the socket with status [code] and [reason] for the disconnect
-  void disconnect({Function callback, int code, String reason}) {
-    if (conn != null || conn?.sink != null) {
+  void disconnect({Function? callback, int? code, String? reason}) {
+    final conn = this.conn;
+    if (conn != null) {
       connState = SocketStates.disconnected;
       if (code != null) {
         conn.sink.close(code, reason ?? '');
       } else {
         conn.sink.close();
       }
-      conn = null;
+      this.conn = null;
     }
     if (callback != null) callback();
   }
 
   /// Logs the message. Override `this.logger` for specialized logging.
-  void log([String kind, String msg, dynamic data]) {
-    if (logger != null) logger(kind, msg, data);
+  void log([String? kind, String? msg, dynamic data]) {
+    logger?.call(kind, msg, data);
   }
 
   /// Registers callbacks for connection state change events
@@ -143,22 +146,22 @@ class RealtimeClient {
   /// socket.onOpen(() {print("Socket opened.");});
   ///
   void onOpen(Function callback) {
-    stateChangeCallbacks['open'].add(callback);
+    stateChangeCallbacks['open']!.add(callback);
   }
 
   /// Registers a callbacks for connection state change events.
   void onClose(Function(dynamic) callback) {
-    stateChangeCallbacks['close'].add(callback);
+    stateChangeCallbacks['close']!.add(callback);
   }
 
   /// Registers a callbacks for connection state change events.
   void onError(Function(dynamic) callback) {
-    stateChangeCallbacks['error'].add(callback);
+    stateChangeCallbacks['error']!.add(callback);
   }
 
   /// Calls a function any time a message is received.
   void onMessage(Function(dynamic) callback) {
-    stateChangeCallbacks['message'].add(callback);
+    stateChangeCallbacks['message']!.add(callback);
   }
 
   /// Returns the current state of the socket.
@@ -200,7 +203,7 @@ class RealtimeClient {
     void callback() {
       encode(message.toJson(), (result) {
         // print('send message $result');
-        conn.sink.add(result);
+        conn?.sink.add(result);
       });
     }
 
@@ -237,7 +240,7 @@ class RealtimeClient {
       final topic = msg['topic'] as String;
       final event = msg['event'] as String;
       final payload = msg['payload'];
-      final ref = msg['ref'] as String;
+      final ref = msg['ref'] as String?;
       if (ref != null && ref == pendingHeartbeatRef) {
         pendingHeartbeatRef = null;
       }
@@ -249,7 +252,7 @@ class RealtimeClient {
 
       channels.where((channel) => channel.isMember(topic)).forEach(
           (channel) => channel.trigger(event, payload: payload, ref: ref));
-      for (final callback in stateChangeCallbacks['message']) {
+      for (final callback in stateChangeCallbacks['message']!) {
         callback(msg);
       }
     });
@@ -262,7 +265,7 @@ class RealtimeClient {
       pendingHeartbeatRef = null;
       log('transport',
           'heartbeat timeout. Attempting to re-establish connection');
-      conn.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
+      conn?.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
       return;
     }
 
@@ -279,10 +282,10 @@ class RealtimeClient {
     log('transport', 'connected to ${endPointURL()}');
     _flushSendBuffer();
     reconnectTimer.reset();
-    if (heartbeatTimer != null) heartbeatTimer.cancel();
+    if (heartbeatTimer != null) heartbeatTimer!.cancel();
     heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs),
         (Timer t) => sendHeartbeat());
-    for (final callback in stateChangeCallbacks['open']) {
+    for (final callback in stateChangeCallbacks['open']!) {
       callback();
     }
   }
@@ -295,10 +298,10 @@ class RealtimeClient {
     /// SocketStates.closed: NOT by user, should try to reconnect
     if (connState == SocketStates.closed) {
       _triggerChanError();
-      if (heartbeatTimer != null) heartbeatTimer.cancel();
+      if (heartbeatTimer != null) heartbeatTimer!.cancel();
       reconnectTimer.scheduleTimeout();
     }
-    for (final callback in stateChangeCallbacks['close']) {
+    for (final callback in stateChangeCallbacks['close']!) {
       callback(event);
     }
   }
@@ -306,7 +309,7 @@ class RealtimeClient {
   void _onConnError(dynamic error) {
     log('transport', error.toString());
     _triggerChanError();
-    for (final callback in stateChangeCallbacks['error']) {
+    for (final callback in stateChangeCallbacks['error']!) {
       callback(error);
     }
   }
