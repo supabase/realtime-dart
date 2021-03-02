@@ -1,3 +1,7 @@
+## [0.0.8]
+
+- feature: Null-Safety
+  
 ## [0.0.7]
 
 - fix: Web compatibility

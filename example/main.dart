@@ -19,7 +19,7 @@ void main() async {
 
   // on connect and subscribe
   socket.connect();
-  channel.subscribe()!.receive('ok', (_) => print('SUBSCRIBED'));
+  channel.subscribe().receive('ok', (_) => print('SUBSCRIBED'));
 
   // on unsubscribe and disconnect
   channel.unsubscribe();
