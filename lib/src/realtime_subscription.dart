@@ -3,7 +3,7 @@ import 'push.dart';
 import 'realtime_client.dart';
 import 'retry_timer.dart';
 
-typedef Callback = void Function(dynamic payload, {String ref});
+typedef Callback = void Function(dynamic payload, {String? ref});
 
 class Binding {
   String event;
@@ -17,11 +17,11 @@ class RealtimeSubscription {
   final String topic;
   final Map<String, dynamic> params;
   final RealtimeClient socket;
-  RetryTimer _rejoinTimer;
+  late RetryTimer _rejoinTimer;
   List<Push> _pushBuffer = [];
   List<Binding> _bindings = [];
-  bool _joinedOnce;
-  Push _joinPush;
+  bool _joinedOnce = false;
+  late Push _joinPush;
   final Duration _timeout;
 
   RealtimeSubscription(this.topic, this.socket, {this.params = const {}})
@@ -45,7 +45,7 @@ class RealtimeSubscription {
       socket.remove(this);
     });
 
-    onError((String reason) {
+    onError((String? reason) {
       if (isLeaving() || isClosed()) {
         return;
       }
@@ -74,7 +74,7 @@ class RealtimeSubscription {
     }
   }
 
-  Push subscribe({Duration timeout}) {
+  Push subscribe({Duration? timeout}) {
     if (_joinedOnce == true) {
       throw "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance";
     } else {
@@ -88,9 +88,9 @@ class RealtimeSubscription {
     on(ChannelEvents.close.eventName(), (reason, {ref}) => callback());
   }
 
-  void onError(Function(String) callback) {
+  void onError(Function(String?) callback) {
     on(ChannelEvents.error.eventName(),
-        (reason, {ref}) => callback(reason as String));
+        (reason, {ref}) => callback(reason as String?));
   }
 
   void on(String event, Callback callback) {
@@ -106,7 +106,7 @@ class RealtimeSubscription {
   }
 
   Push push(ChannelEvents event, Map<String, String> payload,
-      {Duration timeout}) {
+      {Duration? timeout}) {
     if (!_joinedOnce) {
       throw "tried to push '${event.eventName()}' to '$topic' before joining. Use channel.subscribe() before pushing events";
     }
@@ -130,7 +130,7 @@ class RealtimeSubscription {
   /// ```dart
   /// channel.unsubscribe().receive("ok", (_){print("left!");} );
   /// ```
-  Push unsubscribe({Duration timeout}) {
+  Push unsubscribe({Duration? timeout}) {
     void onClose() {
       socket.log('channel', 'leave $topic');
       trigger(ChannelEvents.close.eventName(),
@@ -154,15 +154,15 @@ class RealtimeSubscription {
   ///
   /// Receives all events for specialized message handling before dispatching to the channel callbacks.
   /// Must return the payload, modified or unmodified.
-  dynamic onMessage(String event, dynamic payload, {String ref}) {
+  dynamic onMessage(String event, dynamic payload, {String? ref}) {
     return payload;
   }
 
-  bool isMember(String topic) {
+  bool isMember(String? topic) {
     return this.topic == topic;
   }
 
-  String joinRef() {
+  String? joinRef() {
     return _joinPush.ref;
   }
 
@@ -171,14 +171,14 @@ class RealtimeSubscription {
     _joinPush.resend(timeout);
   }
 
-  void rejoin([Duration timeout]) {
+  void rejoin([Duration? timeout]) {
     if (isLeaving()) {
       return;
     }
     sendJoin(timeout ?? _timeout);
   }
 
-  void trigger(String event, {dynamic payload, String ref}) {
+  void trigger(String event, {dynamic payload, String? ref}) {
     final events = [
       ChannelEvents.close,
       ChannelEvents.error,
@@ -201,7 +201,7 @@ class RealtimeSubscription {
     }
   }
 
-  String replyEventName(String ref) {
+  String replyEventName(String? ref) {
     return 'chan_reply_$ref';
   }
 

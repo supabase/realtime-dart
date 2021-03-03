@@ -2,6 +2,7 @@
 // 3-clause BSD found here: https://raw.githubusercontent.com/epgsql/epgsql/devel/LICENSE
 
 import 'dart:convert';
+import 'package:collection/collection.dart' show IterableExtension;
 
 enum PostgresTypes {
   abstime,
@@ -40,9 +41,9 @@ class Column {
   String type;
 
   /// the type modifier. eg: 4294967295
-  int typeModifier;
+  int? typeModifier;
 
-  Column(this.name, this.type, {this.flags, this.typeModifier});
+  Column(this.name, this.type, {this.flags = const [], this.typeModifier});
 }
 
 /// Takes an array of columns and an object of string values then converts each string value
@@ -58,14 +59,14 @@ class Column {
 /// ```
 Map convertChangeData(
     List<Map<String, dynamic>> columns, Map<String, dynamic> records,
-    {List<String> skipTypes}) {
+    {List<String>? skipTypes}) {
   final result = <String, dynamic>{};
   final _skipTypes = skipTypes ?? [];
   final parsedColumns = <Column>[];
 
   for (final element in columns) {
-    final name = element['name'] as String;
-    final type = element['type'] as String;
+    final name = element['name'] as String?;
+    final type = element['type'] as String?;
     if (name != null && type != null) parsedColumns.add(Column(name, type));
   }
 
@@ -90,8 +91,7 @@ Map convertChangeData(
 /// ```
 dynamic convertColumn(String columnName, List<Column> columns,
     Map<String, dynamic> records, List<String> skipTypes) {
-  final column =
-      columns.firstWhere((x) => x.name == columnName, orElse: () => null);
+  final column = columns.firstWhereOrNull((x) => x.name == columnName);
   final columnValue = records[columnName];
   final columnValueStr = columnValue == null
       ? null
@@ -120,7 +120,7 @@ dynamic convertColumn(String columnName, List<Column> columns,
 /// @example convertCell('_int4', '{1,2,3,4}')
 /// => [1,2,3,4]
 /// ```
-dynamic convertCell(String type, String stringValue) {
+dynamic convertCell(String type, String? stringValue) {
   try {
     if (stringValue == null) return null;
 
@@ -130,9 +130,8 @@ dynamic convertCell(String type, String stringValue) {
       return toArray(stringValue, arrayValue);
     }
 
-    final typeEnum = PostgresTypes.values.firstWhere(
-        (e) => e.toString() == 'PostgresTypes.$type',
-        orElse: () => null);
+    final typeEnum = PostgresTypes.values
+        .firstWhereOrNull((e) => e.toString() == 'PostgresTypes.$type');
     // If not null, convert to correct type.
     switch (typeEnum) {
       case PostgresTypes.abstime:
@@ -223,11 +222,11 @@ String toTimestampString(String stringValue) {
   return stringValue.replaceAll(' ', 'T');
 }
 
-String noop(String stringValue) {
+String? noop(String? stringValue) {
   return stringValue;
 }
 
-bool toBoolean(String stringValue) {
+bool? toBoolean(String? stringValue) {
   switch (stringValue) {
     case 't':
       return true;
