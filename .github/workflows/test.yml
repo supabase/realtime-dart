@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image:  google/dart:beta
+      image: google/dart:latest
 
     steps:
       - name: Checks-out repo
