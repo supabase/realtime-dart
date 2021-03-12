@@ -201,7 +201,7 @@ void main() {
       final mockedSink = MockWebSocketSink();
 
       when(() => mockedSocketChannel.sink).thenReturn(mockedSink);
-      when(() => mockedSink.close(captureAny(of: 0), captureAny(of: '')))
+      when(() => mockedSink.close(any(), any()))
           .thenAnswer((_) => Future.value(null));
 
       const tCode = 12;
@@ -210,8 +210,8 @@ void main() {
       mockedSocket.connect();
       mockedSocket.disconnect(code: tCode, reason: tReason);
 
-      verify(() => mockedSink.close(captureAny(of: 0, that: equals(tCode)),
-          captureAny(of: '', that: equals(tReason)))).called(1);
+      verify(() => mockedSink.close(captureAny(that: equals(tCode)),
+          captureAny(that: equals(tReason)))).called(1);
     });
 
     test('does not throw when no connection', () {
@@ -320,7 +320,7 @@ void main() {
           Message(topic: topic, payload: payload, event: event, ref: ref);
       mockedSocket.push(message);
 
-      verify(() => mockedSink.add(captureAny(of: '', that: equals(jsonData))))
+      verify(() => mockedSink.add(captureAny(that: equals(jsonData))))
           .called(1);
     });
 
@@ -334,12 +334,12 @@ void main() {
           Message(topic: topic, payload: payload, event: event, ref: ref);
       mockedSocket.push(message);
 
-      verifyNever(() => mockedSink.add(captureAny(of: '')));
+      verifyNever(() => mockedSink.add(any()));
       expect(mockedSocket.sendBuffer.length, 1);
 
       final callback = mockedSocket.sendBuffer[0];
       callback();
-      verify(() => mockedSink.add(captureAny(of: '', that: equals(jsonData))))
+      verify(() => mockedSink.add(captureAny(that: equals(jsonData))))
           .called(1);
     });
   });
@@ -398,15 +398,14 @@ void main() {
 
       mockedSocket.sendHeartbeat();
 
-      verify(() => mockedSink.add(captureAny(of: '', that: equals(data))))
-          .called(1);
+      verify(() => mockedSink.add(captureAny(that: equals(data)))).called(1);
     });
 
     test('no ops when not connected', () {
       mockedSocket.connState = SocketStates.connecting;
 
       mockedSocket.sendHeartbeat();
-      verifyNever(() => mockedSink.add(captureAny(of: '')));
+      verifyNever(() => mockedSink.add(any()));
     });
   });
 }
