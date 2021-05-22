@@ -36,7 +36,7 @@ class RealtimeClient {
   Logger? logger;
   late Encoder encode;
   late Decoder decode;
-  late int Function(int) reconnectAfterMs;
+  late TimerCalculation reconnectAfterMs;
   WebSocketChannel? conn;
   List sendBuffer = [];
   Map<String, List<Function>> stateChangeCallbacks = {
@@ -68,16 +68,14 @@ class RealtimeClient {
     this.timeout = Constants.defaultTimeout,
     this.heartbeatIntervalMs = 30000,
     this.longpollerTimeout = 20000,
-    int Function(int)? reconnectAfterMs,
+    TimerCalculation? reconnectAfterMs,
     this.logger,
     this.params = const {},
     this.headers = const {},
   })  : endPoint = '$endPoint/${Transports.websocket}',
         transport = transport ?? createWebSocketClient {
-    this.reconnectAfterMs = reconnectAfterMs ??
-        (int tries) {
-          return [1000, 2000, 5000, 10000][tries - 1];
-        };
+    this.reconnectAfterMs =
+        reconnectAfterMs ?? RetryTimer.createRetryFunction();
     this.encode = encode ??
         (dynamic payload, Function(String result) callback) =>
             callback(json.encode(payload));
