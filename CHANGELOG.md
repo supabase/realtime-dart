@@ -1,11 +1,16 @@
+## [0.0.9]
+
+- fix: default reconnectAfterMs function throws RangeError
+- chore: update mocktail version
+
 ## [0.0.8]
 
 - feature: Null-Safety
-  
+
 ## [0.0.7]
 
 - fix: Web compatibility
-  
+
 ## [0.0.6]
 
 - fix: RetryTimer `_tries` is not initialized
