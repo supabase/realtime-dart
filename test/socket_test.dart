@@ -141,7 +141,7 @@ void main() {
       socket.sendHeartbeat();
       // need to wait for event to trigger
       await Future.delayed(const Duration(seconds: 1), () {});
-      expect(lastMsg['event'], 'phx_heartbeat');
+      expect(lastMsg['event'], 'heartbeat');
 
       socket.disconnect();
       await Future.delayed(const Duration(seconds: 1), () {});
@@ -369,12 +369,8 @@ void main() {
     IOWebSocketChannel mockedSocketChannel;
     late RealtimeClient mockedSocket;
     late WebSocketSink mockedSink;
-    final data = json.encode({
-      'topic': 'phoenix',
-      'event': ChannelEvents.heartbeat.eventName(),
-      'payload': {},
-      'ref': '1'
-    });
+    final data = json.encode(
+        {'topic': 'phoenix', 'event': 'heartbeat', 'payload': {}, 'ref': '1'});
 
     setUp(() {
       mockedSocketChannel = MockIOWebSocketChannel();
