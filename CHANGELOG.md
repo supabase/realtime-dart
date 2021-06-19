@@ -1,3 +1,7 @@
+## [0.1.0]
+
+- fix: heartbeat event name
+
 ## [0.0.9]
 
 - fix: default reconnectAfterMs function throws RangeError
