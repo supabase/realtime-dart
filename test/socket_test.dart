@@ -52,7 +52,10 @@ void main() {
       expect(socket.timeout, const Duration(milliseconds: 10000));
       expect(socket.longpollerTimeout, 20000);
       expect(socket.heartbeatIntervalMs, 30000);
-      expect(socket.logger is Logger, false);
+      expect(
+          socket.logger is void Function(
+              String? kind, String? msg, dynamic data),
+          false);
       expect(socket.reconnectAfterMs is Function, true);
     });
 
@@ -77,7 +80,10 @@ void main() {
       expect(socket.timeout, const Duration(milliseconds: 40000));
       expect(socket.longpollerTimeout, 50000);
       expect(socket.heartbeatIntervalMs, 60000);
-      expect(socket.logger is Logger, true);
+      expect(
+          socket.logger is void Function(
+              String? kind, String? msg, dynamic data),
+          true);
       expect(socket.reconnectAfterMs is Function, true);
     });
   });
