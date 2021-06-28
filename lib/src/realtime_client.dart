@@ -12,30 +12,25 @@ import 'websocket_stub.dart'
     if (dart.library.io) 'websocket_io.dart'
     if (dart.library.html) 'websocket_web.dart';
 
-typedef Logger = void Function(String? kind, String? msg, dynamic data);
-typedef Encoder = void Function(
-    dynamic payload, void Function(String result) callback);
-typedef Decoder = void Function(
-    String payload, void Function(dynamic result) callback);
-typedef WebSocketChannelProvider = WebSocketChannel Function(
-    String url, Map<String, String> headers);
-
 class RealtimeClient {
   List<RealtimeSubscription> channels = [];
   final String endPoint;
   final Map<String, String> headers;
   final Map<String, String> params;
   final Duration timeout;
-  final WebSocketChannelProvider transport;
+  final WebSocketChannel Function(String url, Map<String, String> headers)
+      transport;
   int heartbeatIntervalMs = 30000;
   int longpollerTimeout = 20000;
   Timer? heartbeatTimer;
   String? pendingHeartbeatRef;
   int ref = 0;
   late RetryTimer reconnectTimer;
-  Logger? logger;
-  late Encoder encode;
-  late Decoder decode;
+  void Function(String? kind, String? msg, dynamic data)? logger;
+  late void Function(dynamic payload, void Function(String result) callback)
+      encode;
+  late void Function(String payload, void Function(dynamic result) callback)
+      decode;
   late TimerCalculation reconnectAfterMs;
   WebSocketChannel? conn;
   List sendBuffer = [];
@@ -62,9 +57,12 @@ class RealtimeClient {
   /// `reconnectAfterMs` The optional function that returns the millsec reconnect interval. Defaults to stepped backoff off.
   RealtimeClient(
     String endPoint, {
-    WebSocketChannelProvider? transport,
-    Encoder? encode,
-    Decoder? decode,
+    WebSocketChannel Function(String url, Map<String, String> headers)?
+        transport,
+    void Function(dynamic payload, void Function(String result) callback)?
+        encode,
+    void Function(String payload, void Function(dynamic result) callback)?
+        decode,
     this.timeout = Constants.defaultTimeout,
     this.heartbeatIntervalMs = 30000,
     this.longpollerTimeout = 20000,
