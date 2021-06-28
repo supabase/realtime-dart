@@ -8,12 +8,12 @@ void main() {
   });
 
   test('retry function should return first delay on tries == 1', () {
-    final backoff = RetryTimer.createRetryFunction(firstDelay: 1000);
+    final backoff = RetryTimer.createRetryFunction();
     expect(backoff(1), 1000);
   });
 
   test('retry function should return firstDelay * 4 for tries 3', () {
-    final backoff = RetryTimer.createRetryFunction(firstDelay: 1000);
+    final backoff = RetryTimer.createRetryFunction();
     expect(backoff(3), 1000 * 4);
   });
 }

@@ -27,8 +27,11 @@ jobs:
       - name: Install dependencies
         run: dart pub get
 
-      - name: Analyze project source
-        run: dart analyze
+      - name: dartfmt
+        run: dart format lib test -l 80 --set-exit-if-changed
+
+      - name: analyzer
+        run: dart analyze --fatal-warnings --fatal-infos .
 
       - name: Run tests
         run: dart test
