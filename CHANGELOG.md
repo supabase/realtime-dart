@@ -1,3 +1,7 @@
+## [0.1.1]
+
+- fix: converted typedefs in `RealtimeClient` to function types
+
 ## [0.1.0]
 
 - fix: heartbeat event name
