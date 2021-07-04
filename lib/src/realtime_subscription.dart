@@ -195,7 +195,14 @@ class RealtimeSubscription {
       throw 'channel onMessage callbacks must return the payload, modified or unmodified';
     }
 
-    final filtered = _bindings.where((bind) => bind.event == event);
+    final filtered = _bindings.where((bind) {
+      /// bind all realtime events
+      if (bind.event == '*') {
+        return event == payload['type'];
+      } else {
+        return bind.event == event;
+      }
+    });
     for (final bind in filtered) {
       bind.callback(handledPayload, ref: ref);
     }
