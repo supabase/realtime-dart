@@ -1,3 +1,7 @@
+## [0.1.2]
+
+- fix: subscription type '*' does not fire callback bug
+
 ## [0.1.1]
 
 - fix: converted typedefs in `RealtimeClient` to function types
