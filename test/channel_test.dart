@@ -1,5 +1,3 @@
-import 'package:clock/clock.dart';
-import 'package:fake_async/fake_async.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:realtime_client/realtime_client.dart';
 import 'package:realtime_client/src/push.dart';
@@ -180,6 +178,34 @@ void main() {
       expect(callBackEventCalled1, 0);
       expect(callbackEventCalled2, 0);
       expect(callbackOtherCalled, 1);
+    });
+  });
+
+  group('unsubscribe', () {
+    setUp(() {
+      socket = RealtimeClient('/socket');
+
+      channel = socket.channel('topic', chanParams: {'one': 'two'});
+      channel.subscribe().trigger('ok', {});
+    });
+
+    test("closes channel on 'ok' from server", () {
+      final anotherChannel =
+          socket.channel('another', chanParams: {'three': 'four'});
+      expect(socket.channels.length, 2);
+
+      channel.unsubscribe().trigger('ok', {});
+
+      expect(socket.channels.length, 1);
+      expect(socket.channels[0], anotherChannel);
+    });
+
+    test("sets state to closed on 'ok' event", () {
+      expect(channel.isClosed(), false);
+
+      channel.unsubscribe().trigger('ok', {});
+
+      expect(channel.isClosed(), true);
     });
   });
 }
