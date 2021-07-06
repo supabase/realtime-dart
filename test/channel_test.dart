@@ -1,5 +1,8 @@
+import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:realtime_client/realtime_client.dart';
+import 'package:realtime_client/src/push.dart';
 import 'package:test/test.dart';
 
 class MockRealtimeClient extends Mock implements RealtimeClient {}
@@ -7,6 +10,8 @@ class MockRealtimeClient extends Mock implements RealtimeClient {}
 void main() {
   late RealtimeClient socket;
   late RealtimeSubscription channel;
+
+  final defaultRef = '1';
 
   test('channel should be initially closed', () {
     final channel = RealtimeSubscription('topic', RealtimeClient('endpoint'));
@@ -55,6 +60,54 @@ void main() {
     });
   });
 
+  group('onError', () {
+    late Push joinPush;
+
+    setUp(() {
+      socket = RealtimeClient('/socket');
+      channel = socket.channel('topic', chanParams: {'one': 'two'});
+      channel.subscribe();
+    });
+
+    test("sets state to 'errored'", () {
+      expect(channel.isErrored(), false);
+
+      channel.trigger('phx_error');
+
+      expect(channel.isErrored(), true);
+    });
+  });
+
+  group('onClose', () {
+    setUp(() {
+      socket = RealtimeClient('/socket');
+      channel = socket.channel('topic', chanParams: {'one': 'two'});
+      channel.subscribe();
+    });
+
+    test("sets state to 'closed'", () {
+      expect(channel.isClosed(), false);
+
+      channel.trigger('phx_close');
+
+      expect(channel.isClosed(), true);
+    });
+  });
+
+  group('onMessage', () {
+    setUp(() {
+      socket = RealtimeClient('/socket');
+
+      channel = socket.channel('topic', chanParams: {'one': 'two'});
+    });
+
+    test('returns payload by default', () {
+      final payload = channel.onMessage('event', {'one': 'two'});
+
+      expect(payload, {'one': 'two'});
+    });
+  });
+
   group('on', () {
     late RealtimeSubscription channel;
 
@@ -97,6 +150,36 @@ void main() {
       channel.trigger('UPDATE', payload: {'type': 'UPDATE'});
       channel.trigger('DELETE', payload: {'type': 'DELETE'});
       expect(callbackCalled, 3);
+    });
+  });
+
+  group('off', () {
+    setUp(() {
+      socket = RealtimeClient('/socket');
+
+      channel = socket.channel('topic', chanParams: {'one': 'two'});
+    });
+
+    test('removes all callbacks for event', () {
+      var callBackEventCalled1 = 0;
+      var callbackEventCalled2 = 0;
+      var callbackOtherCalled = 0;
+
+      channel.on(
+          'event', (dynamic payload, {String? ref}) => callBackEventCalled1++);
+      channel.on(
+          'event', (dynamic payload, {String? ref}) => callbackEventCalled2++);
+      channel.on(
+          'other', (dynamic payload, {String? ref}) => callbackOtherCalled++);
+
+      channel.off('event');
+
+      channel.trigger('event', payload: {}, ref: defaultRef);
+      channel.trigger('other', payload: {}, ref: defaultRef);
+
+      expect(callBackEventCalled1, 0);
+      expect(callbackEventCalled2, 0);
+      expect(callbackOtherCalled, 1);
     });
   });
 }
