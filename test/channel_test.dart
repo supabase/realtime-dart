@@ -56,8 +56,6 @@ void main() {
   });
 
   group('onError', () {
-    late Push joinPush;
-
     setUp(() {
       socket = RealtimeClient('/socket');
       channel = socket.channel('topic', chanParams: {'one': 'two'});
