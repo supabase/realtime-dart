@@ -1,6 +1,10 @@
+## [0.1.3]
+
+- refactor: rename Column class to PostgresColumn
+
 ## [0.1.2]
 
-- fix: subscription type '*' does not fire callback bug
+- fix: subscription type '\*' does not fire callback bug
 
 ## [0.1.1]
 
