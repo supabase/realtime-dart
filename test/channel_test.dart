@@ -1,15 +1,12 @@
-import 'package:mocktail/mocktail.dart';
 import 'package:realtime_client/realtime_client.dart';
 import 'package:realtime_client/src/push.dart';
 import 'package:test/test.dart';
-
-class MockRealtimeClient extends Mock implements RealtimeClient {}
 
 void main() {
   late RealtimeClient socket;
   late RealtimeSubscription channel;
 
-  final defaultRef = '1';
+  const defaultRef = '1';
 
   test('channel should be initially closed', () {
     final channel = RealtimeSubscription('topic', RealtimeClient('endpoint'));
