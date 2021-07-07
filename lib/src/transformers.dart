@@ -30,7 +30,7 @@ enum PostgresTypes {
   tstzrange,
 }
 
-class Column {
+class PostgresColumn {
   /// any special flags for the column. eg: ["key"]
   List<String> flags;
 
@@ -43,7 +43,8 @@ class Column {
   /// the type modifier. eg: 4294967295
   int? typeModifier;
 
-  Column(this.name, this.type, {this.flags = const [], this.typeModifier});
+  PostgresColumn(this.name, this.type,
+      {this.flags = const [], this.typeModifier});
 }
 
 /// Takes an array of columns and an object of string values then converts each string value
@@ -62,12 +63,14 @@ Map convertChangeData(
     {List<String>? skipTypes}) {
   final result = <String, dynamic>{};
   final _skipTypes = skipTypes ?? [];
-  final parsedColumns = <Column>[];
+  final parsedColumns = <PostgresColumn>[];
 
   for (final element in columns) {
     final name = element['name'] as String?;
     final type = element['type'] as String?;
-    if (name != null && type != null) parsedColumns.add(Column(name, type));
+    if (name != null && type != null) {
+      parsedColumns.add(PostgresColumn(name, type));
+    }
   }
 
   records.forEach((key, value) {
@@ -89,7 +92,7 @@ Map convertChangeData(
 /// convertColumn('age', [{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], ['Paul', '33'], ['int4'])
 /// => "33"
 /// ```
-dynamic convertColumn(String columnName, List<Column> columns,
+dynamic convertColumn(String columnName, List<PostgresColumn> columns,
     Map<String, dynamic> records, List<String> skipTypes) {
   final column = columns.firstWhereOrNull((x) => x.name == columnName);
   final columnValue = records[columnName];
