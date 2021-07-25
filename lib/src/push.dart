@@ -62,7 +62,7 @@ class Push {
   }
 
   void startTimeout() {
-    if (_timeoutTimer == null) return;
+    if (_timeoutTimer != null) return;
 
     _ref = _channel.socket.makeRef();
     final event = _channel.replyEventName(ref);

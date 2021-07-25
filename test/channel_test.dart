@@ -191,7 +191,7 @@ void main() {
       channel.unsubscribe().trigger('ok', {});
 
       expect(socket.channels.length, 1);
-      expect(socket.channels[0], anotherChannel);
+      expect(socket.channels[0].topic, anotherChannel.topic);
     });
 
     test("sets state to closed on 'ok' event", () {
