@@ -1,3 +1,7 @@
+## [0.1.4]
+
+- fix: timeout timer not starting
+
 ## [0.1.3]
 
 - refactor: rename Column class to PostgresColumn
