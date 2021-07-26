@@ -201,5 +201,14 @@ void main() {
 
       expect(channel.isClosed(), true);
     });
+
+    test("able to unsubscribe from * subscription", () {
+      channel.on('*', (payload, {ref}) {});
+      expect(socket.channels.length, 1);
+
+      channel.unsubscribe().trigger('ok', {});
+
+      expect(socket.channels.length, 0);
+    });
   });
 }
