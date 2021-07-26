@@ -198,7 +198,7 @@ class RealtimeSubscription {
     final filtered = _bindings.where((bind) {
       /// bind all realtime events
       if (bind.event == '*') {
-        return event == payload['type'];
+        return event == (payload is Map ? payload['type'] : payload);
       } else {
         return bind.event == event;
       }
