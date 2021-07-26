@@ -1,3 +1,7 @@
+## [0.1.5]
+
+- fix: bug where unsubscribe from '\*' type subscription throws exception
+
 ## [0.1.4]
 
 - fix: timeout timer not starting
