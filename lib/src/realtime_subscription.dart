@@ -134,7 +134,7 @@ class RealtimeSubscription {
     void onClose() {
       socket.log('channel', 'leave $topic');
       trigger(ChannelEvents.close.eventName(),
-          payload: 'leave', ref: joinRef());
+          payload: {'type': 'leave'}, ref: joinRef());
     }
 
     _state = ChannelStates.leaving;
