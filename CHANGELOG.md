@@ -1,3 +1,7 @@
+## [0.1.6]
+
+- fix: getting value from received response map
+
 ## [0.1.5]
 
 - fix: bug where unsubscribe from '\*' type subscription throws exception
