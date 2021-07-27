@@ -54,7 +54,7 @@ class Push {
 
   Push receive(String status, Callback callback) {
     if (_hasReceived(status)) {
-      callback(_receivedResp?.response);
+      callback(_receivedResp['response']);
     }
 
     _recHooks.add(Hook(status, callback));
@@ -108,7 +108,9 @@ class Push {
   }
 
   bool _hasReceived(String status) {
-    return _receivedResp != null && _receivedResp.status == status;
+    return _receivedResp != null &&
+        _receivedResp is Map &&
+        _receivedResp['status'] == status;
   }
 }
 
