@@ -1,3 +1,7 @@
+## [0.1.7]
+
+- fix: heartbeatTimer not cancelled upon calling `socket.disconnect()`
+
 ## [0.1.6]
 
 - fix: getting value from received response map
