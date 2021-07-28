@@ -294,9 +294,9 @@ class RealtimeClient {
     /// SocketStates.closed: NOT by user, should try to reconnect
     if (connState == SocketStates.closed) {
       _triggerChanError();
-      if (heartbeatTimer != null) heartbeatTimer!.cancel();
       reconnectTimer.scheduleTimeout();
     }
+    if (heartbeatTimer != null) heartbeatTimer!.cancel();
     for (final callback in stateChangeCallbacks['close']!) {
       callback(event);
     }
