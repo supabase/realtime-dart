@@ -58,7 +58,7 @@ class PostgresColumn {
 /// convertChangeData([{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], {first_name: 'Paul', age:'33'}, {})
 /// => { first_name: 'Paul', age: 33 }
 /// ```
-Map convertChangeData(
+Map<String, dynamic> convertChangeData(
     List<Map<String, dynamic>> columns, Map<String, dynamic> records,
     {List<String>? skipTypes}) {
   final result = <String, dynamic>{};
