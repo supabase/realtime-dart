@@ -1,3 +1,7 @@
+## [0.1.8]
+
+- fix: add strict typing to `convertChangeData()`
+
 ## [0.1.7]
 
 - fix: heartbeatTimer not cancelled upon calling `socket.disconnect()`
