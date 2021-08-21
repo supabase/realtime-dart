@@ -61,4 +61,18 @@ void main() {
     expect(convertChangeData(columns, records),
         {'id': 253, 'name': 'Singapore', 'continent': null});
   });
+
+  group('convertCell', () {
+    test('_int4', () {
+      expect(convertCell('_int4', '{}'), equals([]));
+      expect(convertCell('_int4', '{1}'), equals([1]));
+      expect(convertCell('_int4', '{1,2,3}'), equals([1, 2, 3]));
+    });
+
+    test('_varchar', () {
+      expect(convertCell('_varchar', '{}'), equals([]));
+      expect(convertCell('_varchar', '{foo}'), equals(['foo']));
+      expect(convertCell('_varchar', '{foo,bar}'), equals(['foo', 'bar']));
+    });
+  });
 }
