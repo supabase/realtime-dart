@@ -3,9 +3,9 @@ import 'package:test/test.dart';
 
 void main() {
   test('transformers toArray', () {
-    expect(toArray('int4', '{}'), equals([]));
-    expect(toArray('int4', '{1}'), equals([1]));
-    expect(toArray('int4', '{1,2,3}'), equals([1, 2, 3]));
+    expect(toArray(type: 'int4', stringValue: '{}'), equals([]));
+    expect(toArray(type: 'int4', stringValue: '{1}'), equals([1]));
+    expect(toArray(type: 'int4', stringValue: '{1,2,3}'), equals([1, 2, 3]));
   });
 
   test('transformers toTimestampString', () {
