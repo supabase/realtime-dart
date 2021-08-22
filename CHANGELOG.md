@@ -1,3 +1,7 @@
+## [0.1.9]
+
+- fix: bug where array value is not properly emitted
+
 ## [0.1.8]
 
 - fix: add strict typing to `convertChangeData()`
