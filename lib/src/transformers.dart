@@ -129,8 +129,8 @@ dynamic convertCell(String type, String? stringValue) {
 
     // if data type is an array
     if (type[0] == '_') {
-      final arrayValue = type.substring(1, type.length);
-      return toArray(stringValue, arrayValue);
+      final arrayType = type.substring(1, type.length);
+      return toArray(type: arrayType, stringValue: stringValue);
     }
 
     final typeEnum = PostgresTypes.values
@@ -202,7 +202,7 @@ dynamic convertCell(String type, String? stringValue) {
 /// @example toArray('{}', 'int4')
 /// //=> []
 ///  ```
-List<dynamic> toArray(String type, String stringValue) {
+List<dynamic> toArray({required String type, required String stringValue}) {
   // this takes off the '{' & '}'
   final stringEnriched = stringValue.substring(1, stringValue.length - 1);
 

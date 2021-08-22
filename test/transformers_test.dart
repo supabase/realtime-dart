@@ -3,9 +3,9 @@ import 'package:test/test.dart';
 
 void main() {
   test('transformers toArray', () {
-    expect(toArray('int4', '{}'), equals([]));
-    expect(toArray('int4', '{1}'), equals([1]));
-    expect(toArray('int4', '{1,2,3}'), equals([1, 2, 3]));
+    expect(toArray(type: 'int4', stringValue: '{}'), equals([]));
+    expect(toArray(type: 'int4', stringValue: '{1}'), equals([1]));
+    expect(toArray(type: 'int4', stringValue: '{1,2,3}'), equals([1, 2, 3]));
   });
 
   test('transformers toTimestampString', () {
@@ -60,5 +60,19 @@ void main() {
     final records = {'id': 253, 'name': 'Singapore', 'continent': null};
     expect(convertChangeData(columns, records),
         {'id': 253, 'name': 'Singapore', 'continent': null});
+  });
+
+  group('convertCell', () {
+    test('_int4', () {
+      expect(convertCell('_int4', '{}'), equals([]));
+      expect(convertCell('_int4', '{1}'), equals([1]));
+      expect(convertCell('_int4', '{1,2,3}'), equals([1, 2, 3]));
+    });
+
+    test('_varchar', () {
+      expect(convertCell('_varchar', '{}'), equals([]));
+      expect(convertCell('_varchar', '{foo}'), equals(['foo']));
+      expect(convertCell('_varchar', '{foo,bar}'), equals(['foo', 'bar']));
+    });
   });
 }
