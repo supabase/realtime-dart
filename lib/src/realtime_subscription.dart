@@ -3,11 +3,9 @@ import 'push.dart';
 import 'realtime_client.dart';
 import 'retry_timer.dart';
 
-typedef Callback = void Function(dynamic payload, {String? ref});
-
 class Binding {
   String event;
-  Callback callback;
+  void Function(dynamic payload, {String? ref}) callback;
 
   Binding(this.event, this.callback);
 }
@@ -93,7 +91,8 @@ class RealtimeSubscription {
         (reason, {ref}) => callback(reason as String?));
   }
 
-  void on(String event, Callback callback) {
+  void on(
+      String event, void Function(dynamic payload, {String? ref}) callback) {
     _bindings.add(Binding(event, callback));
   }
 
