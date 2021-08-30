@@ -1,3 +1,7 @@
+## [0.1.10]
+
+- fix: converted `Callback` from typedef` to function types
+
 ## [0.1.9]
 
 - fix: bug where array value is not properly emitted
