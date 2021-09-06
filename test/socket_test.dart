@@ -57,15 +57,20 @@ void main() {
               String? kind, String? msg, dynamic data),
           false);
       expect(socket.reconnectAfterMs is Function, true);
+      expect(
+          socket.headers['X-Client-Info']!.split('/').first, 'realtime-dart');
     });
 
     test('overrides some defaults with options', () async {
-      final socket = RealtimeClient('wss://example.com/socket',
-          timeout: const Duration(milliseconds: 40000),
-          longpollerTimeout: 50000,
-          heartbeatIntervalMs: 60000,
-          // ignore: avoid_print
-          logger: (kind, msg, data) => print('[$kind] $msg $data'));
+      final socket = RealtimeClient(
+        'wss://example.com/socket',
+        timeout: const Duration(milliseconds: 40000),
+        longpollerTimeout: 50000,
+        heartbeatIntervalMs: 60000,
+        // ignore: avoid_print
+        logger: (kind, msg, data) => print('[$kind] $msg $data'),
+        headers: {'X-Client-Info': 'supabase-dart/0.0.0'},
+      );
       expect(socket.channels.length, 0);
       expect(socket.sendBuffer.length, 0);
       expect(socket.ref, 0);
@@ -85,6 +90,7 @@ void main() {
               String? kind, String? msg, dynamic data),
           true);
       expect(socket.reconnectAfterMs is Function, true);
+      expect(socket.headers['X-Client-Info'], 'supabase-dart/0.0.0');
     });
   });
 

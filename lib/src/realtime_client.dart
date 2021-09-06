@@ -69,8 +69,12 @@ class RealtimeClient {
     TimerCalculation? reconnectAfterMs,
     this.logger,
     this.params = const {},
-    this.headers = const {},
+    Map<String, String>? headers,
   })  : endPoint = '$endPoint/${Transports.websocket}',
+        headers = {
+          ...Constants.defaultHeaders,
+          if (headers != null) ...headers,
+        },
         transport = transport ?? createWebSocketClient {
     this.reconnectAfterMs =
         reconnectAfterMs ?? RetryTimer.createRetryFunction();
@@ -80,7 +84,6 @@ class RealtimeClient {
     this.decode = decode ??
         (String payload, Function(dynamic result) callback) =>
             callback(json.decode(payload));
-
     reconnectTimer = RetryTimer(
         () => {disconnect(callback: () => connect())}, this.reconnectAfterMs);
   }
