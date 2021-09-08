@@ -4,15 +4,17 @@ import 'dart:io';
 import 'package:mocktail/mocktail.dart';
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
-import 'package:test/test.dart';
 import 'package:realtime_client/realtime_client.dart';
+import 'package:test/test.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'socket_test_stubs.dart';
 
 typedef WebSocketChannelClosure = WebSocketChannel Function(
-    String url, Map<String, String> headers);
+  String url,
+  Map<String, String> headers,
+);
 
 void main() {
   const int int64MaxValue = 9223372036854775807;
@@ -53,12 +55,18 @@ void main() {
       expect(socket.longpollerTimeout, 20000);
       expect(socket.heartbeatIntervalMs, 30000);
       expect(
-          socket.logger is void Function(
-              String? kind, String? msg, dynamic data),
-          false);
+        socket.logger is void Function(
+          String? kind,
+          String? msg,
+          dynamic data,
+        ),
+        false,
+      );
       expect(socket.reconnectAfterMs is Function, true);
       expect(
-          socket.headers['X-Client-Info']!.split('/').first, 'realtime-dart');
+        socket.headers['X-Client-Info']!.split('/').first,
+        'realtime-dart',
+      );
     });
 
     test('overrides some defaults with options', () async {
@@ -86,9 +94,13 @@ void main() {
       expect(socket.longpollerTimeout, 50000);
       expect(socket.heartbeatIntervalMs, 60000);
       expect(
-          socket.logger is void Function(
-              String? kind, String? msg, dynamic data),
-          true);
+        socket.logger is void Function(
+          String? kind,
+          String? msg,
+          dynamic data,
+        ),
+        true,
+      );
       expect(socket.reconnectAfterMs is Function, true);
       expect(socket.headers['X-Client-Info'], 'supabase-dart/0.0.0');
     });
@@ -106,15 +118,20 @@ void main() {
     test('returns endpoint with parameters', () {
       final socket =
           RealtimeClient('ws://example.org/chat', params: {'foo': 'bar'});
-      expect(socket.endPointURL(),
-          'ws://example.org/chat/websocket?foo=bar&vsn=1.0.0');
+      expect(
+        socket.endPointURL(),
+        'ws://example.org/chat/websocket?foo=bar&vsn=1.0.0',
+      );
     });
 
     test('returns endpoint with apikey', () {
-      final socket = RealtimeClient('ws://example.org/chat',
-          params: {'apikey': '123456789'});
-      expect(socket.endPointURL(),
-          'ws://example.org/chat/websocket?apikey=123456789&vsn=1.0.0');
+      final socket = RealtimeClient('ws://example.org/chat', params: {
+        'apikey': '123456789',
+      });
+      expect(
+        socket.endPointURL(),
+        'ws://example.org/chat/websocket?apikey=123456789&vsn=1.0.0',
+      );
     });
   });
 
@@ -195,9 +212,11 @@ void main() {
     test('calls callback', () {
       int closes = 0;
       socket.connect();
-      socket.disconnect(callback: () {
-        closes += 1;
-      });
+      socket.disconnect(
+        callback: () {
+          closes += 1;
+        },
+      );
 
       expect(closes, 1);
     });
@@ -222,8 +241,12 @@ void main() {
       mockedSocket.connect();
       mockedSocket.disconnect(code: tCode, reason: tReason);
 
-      verify(() => mockedSink.close(captureAny(that: equals(tCode)),
-          captureAny(that: equals(tReason)))).called(1);
+      verify(
+        () => mockedSink.close(
+          captureAny(that: equals(tCode)),
+          captureAny(that: equals(tReason)),
+        ),
+      ).called(1);
     });
 
     test('does not throw when no connection', () {
@@ -381,8 +404,12 @@ void main() {
     IOWebSocketChannel mockedSocketChannel;
     late RealtimeClient mockedSocket;
     late WebSocketSink mockedSink;
-    final data = json.encode(
-        {'topic': 'phoenix', 'event': 'heartbeat', 'payload': {}, 'ref': '1'});
+    final data = json.encode({
+      'topic': 'phoenix',
+      'event': 'heartbeat',
+      'payload': {},
+      'ref': '1',
+    });
 
     setUp(() {
       mockedSocketChannel = MockIOWebSocketChannel();

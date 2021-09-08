@@ -61,8 +61,13 @@ class RealtimeSubscription {
       _rejoinTimer.scheduleTimeout();
     });
 
-    on(ChannelEvents.reply.eventName(),
-        (payload, {ref}) => trigger(replyEventName(ref), payload: payload));
+    on(
+      ChannelEvents.reply.eventName(),
+      (payload, {ref}) => trigger(
+        replyEventName(ref),
+        payload: payload,
+      ),
+    );
   }
 
   void rejoinUntilConnected() {
@@ -87,12 +92,16 @@ class RealtimeSubscription {
   }
 
   void onError(Function(String?) callback) {
-    on(ChannelEvents.error.eventName(),
-        (reason, {ref}) => callback(reason as String?));
+    on(
+      ChannelEvents.error.eventName(),
+      (reason, {ref}) => callback(reason as String?),
+    );
   }
 
   void on(
-      String event, void Function(dynamic payload, {String? ref}) callback) {
+    String event,
+    void Function(dynamic payload, {String? ref}) callback,
+  ) {
     _bindings.add(Binding(event, callback));
   }
 
@@ -104,8 +113,11 @@ class RealtimeSubscription {
     return socket.isConnected() && isJoined();
   }
 
-  Push push(ChannelEvents event, Map<String, String> payload,
-      {Duration? timeout}) {
+  Push push(
+    ChannelEvents event,
+    Map<String, String> payload, {
+    Duration? timeout,
+  }) {
     if (!_joinedOnce) {
       throw "tried to push '${event.eventName()}' to '$topic' before joining. Use channel.subscribe() before pushing events";
     }
@@ -132,8 +144,11 @@ class RealtimeSubscription {
   Push unsubscribe({Duration? timeout}) {
     void onClose() {
       socket.log('channel', 'leave $topic');
-      trigger(ChannelEvents.close.eventName(),
-          payload: {'type': 'leave'}, ref: joinRef());
+      trigger(
+        ChannelEvents.close.eventName(),
+        payload: {'type': 'leave'},
+        ref: joinRef(),
+      );
     }
 
     _state = ChannelStates.leaving;

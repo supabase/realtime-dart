@@ -25,8 +25,12 @@ class Push {
   /// `event` The event, for example `"phx_join"`
   /// `payload` The payload, for example `{user_id: 123}`
   /// `timeout` The push timeout in milliseconds
-  Push(this._channel, this._event,
-      [this.payload = const {}, this._timeout = Constants.defaultTimeout]);
+  Push(
+    this._channel,
+    this._event, [
+    this.payload = const {},
+    this._timeout = Constants.defaultTimeout,
+  ]);
 
   String? get ref => _ref;
 
@@ -48,7 +52,11 @@ class Push {
     startTimeout();
     sent = true;
     final message = Message(
-        topic: _channel.topic, payload: payload, event: _event, ref: ref);
+      topic: _channel.topic,
+      payload: payload,
+      event: _event,
+      ref: ref,
+    );
     _channel.socket.push(message);
   }
 
@@ -82,10 +90,13 @@ class Push {
 
   void trigger(String status, dynamic response) {
     if (_refEvent != null) {
-      _channel.trigger(_refEvent!, payload: {
-        'status': status,
-        'response': response,
-      });
+      _channel.trigger(
+        _refEvent!,
+        payload: {
+          'status': status,
+          'response': response,
+        },
+      );
     }
   }
 

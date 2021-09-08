@@ -119,9 +119,13 @@ void main() {
       var eventCallbackCalled = 0;
       var otherEventCallbackCalled = 0;
       channel.on(
-          'event', (dynamic payload, {String? ref}) => eventCallbackCalled++);
-      channel.on('otherEvent',
-          (dynamic payload, {String? ref}) => otherEventCallbackCalled++);
+        'event',
+        (dynamic payload, {String? ref}) => eventCallbackCalled++,
+      );
+      channel.on(
+        'otherEvent',
+        (dynamic payload, {String? ref}) => otherEventCallbackCalled++,
+      );
 
       channel.trigger('event', payload: {});
       expect(eventCallbackCalled, 1);
@@ -158,11 +162,17 @@ void main() {
       var callbackOtherCalled = 0;
 
       channel.on(
-          'event', (dynamic payload, {String? ref}) => callBackEventCalled1++);
+        'event',
+        (dynamic payload, {String? ref}) => callBackEventCalled1++,
+      );
       channel.on(
-          'event', (dynamic payload, {String? ref}) => callbackEventCalled2++);
+        'event',
+        (dynamic payload, {String? ref}) => callbackEventCalled2++,
+      );
       channel.on(
-          'other', (dynamic payload, {String? ref}) => callbackOtherCalled++);
+        'other',
+        (dynamic payload, {String? ref}) => callbackOtherCalled++,
+      );
 
       channel.off('event');
 

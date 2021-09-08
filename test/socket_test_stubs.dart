@@ -15,8 +15,10 @@ class SocketWithMockedChannel extends RealtimeClient {
   Map<String, RealtimeSubscription> mockedChannelLooker = {};
 
   @override
-  RealtimeSubscription channel(String topic,
-      {Map<String, dynamic> chanParams = const {}}) {
+  RealtimeSubscription channel(
+    String topic, {
+    Map<String, dynamic> chanParams = const {},
+  }) {
     if (mockedChannelLooker.keys.contains(topic)) {
       channels.add(mockedChannelLooker[topic]!);
       return mockedChannelLooker[topic]!;
