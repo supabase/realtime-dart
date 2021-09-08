@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:mocktail/mocktail.dart';
+import 'package:realtime_client/realtime_client.dart';
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
-import 'package:realtime_client/realtime_client.dart';
 import 'package:test/test.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -125,9 +125,12 @@ void main() {
     });
 
     test('returns endpoint with apikey', () {
-      final socket = RealtimeClient('ws://example.org/chat', params: {
-        'apikey': '123456789',
-      });
+      final socket = RealtimeClient(
+        'ws://example.org/chat',
+        params: {
+          'apikey': '123456789',
+        },
+      );
       expect(
         socket.endPointURL(),
         'ws://example.org/chat/websocket?apikey=123456789&vsn=1.0.0',

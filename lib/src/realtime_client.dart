@@ -261,13 +261,13 @@ class RealtimeClient {
         payload,
       );
 
-      channels
-          .where((channel) => channel.isMember(topic))
-          .forEach((channel) => channel.trigger(
-                event,
-                payload: payload,
-                ref: ref,
-              ));
+      channels.where((channel) => channel.isMember(topic)).forEach(
+            (channel) => channel.trigger(
+              event,
+              payload: payload,
+              ref: ref,
+            ),
+          );
       for (final callback in stateChangeCallbacks['message']!) {
         callback(msg);
       }
