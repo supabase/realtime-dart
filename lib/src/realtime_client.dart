@@ -85,7 +85,9 @@ class RealtimeClient {
         (String payload, Function(dynamic result) callback) =>
             callback(json.decode(payload));
     reconnectTimer = RetryTimer(
-        () => {disconnect(callback: () => connect())}, this.reconnectAfterMs);
+      () => {disconnect(callback: () => connect())},
+      this.reconnectAfterMs,
+    );
   }
 
   /// Connects the socket.
@@ -100,19 +102,23 @@ class RealtimeClient {
       connState = SocketStates.open;
       _onConnOpen();
       conn.stream.timeout(Duration(milliseconds: longpollerTimeout));
-      conn.stream.listen((message) {
-        // handling of the incoming messages
-        onConnMessage(message as String);
-      }, onError: (error) {
-        // error handling
-        _onConnError(error);
-      }, onDone: () {
-        // communication has been closed
-        if (connState != SocketStates.disconnected) {
-          connState = SocketStates.closed;
-        }
-        _onConnClose('');
-      });
+      conn.stream.listen(
+        (message) {
+          // handling of the incoming messages
+          onConnMessage(message as String);
+        },
+        onError: (error) {
+          // error handling
+          _onConnError(error);
+        },
+        onDone: () {
+          // communication has been closed
+          if (connState != SocketStates.disconnected) {
+            connState = SocketStates.closed;
+          }
+          _onConnClose('');
+        },
+      );
     } catch (e) {
       /// General error handling
       _onConnError(e);
@@ -191,8 +197,10 @@ class RealtimeClient {
     channels = channels.where((c) => c.joinRef() != channel.joinRef()).toList();
   }
 
-  RealtimeSubscription channel(String topic,
-      {Map<String, dynamic> chanParams = const {}}) {
+  RealtimeSubscription channel(
+    String topic, {
+    Map<String, dynamic> chanParams = const {},
+  }) {
     final chan = RealtimeSubscription(topic, this, params: chanParams);
     channels.add(chan);
     return chan;
@@ -206,8 +214,11 @@ class RealtimeClient {
       });
     }
 
-    log('push', '${message.topic} ${message.event} (${message.ref})',
-        message.payload);
+    log(
+      'push',
+      '${message.topic} ${message.event} (${message.ref})',
+      message.payload,
+    );
 
     if (isConnected()) {
       callback();
@@ -245,12 +256,18 @@ class RealtimeClient {
       }
 
       log(
-          'receive',
-          "${payload['status'] ?? ''} $topic $event ${ref != null ? '($ref)' : ''}",
-          payload);
+        'receive',
+        "${payload['status'] ?? ''} $topic $event ${ref != null ? '($ref)' : ''}",
+        payload,
+      );
 
       channels.where((channel) => channel.isMember(topic)).forEach(
-          (channel) => channel.trigger(event, payload: payload, ref: ref));
+            (channel) => channel.trigger(
+              event,
+              payload: payload,
+              ref: ref,
+            ),
+          );
       for (final callback in stateChangeCallbacks['message']!) {
         callback(msg);
       }
@@ -262,18 +279,21 @@ class RealtimeClient {
 
     if (pendingHeartbeatRef != null) {
       pendingHeartbeatRef = null;
-      log('transport',
-          'heartbeat timeout. Attempting to re-establish connection');
+      log(
+        'transport',
+        'heartbeat timeout. Attempting to re-establish connection',
+      );
       conn?.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
       return;
     }
 
     pendingHeartbeatRef = makeRef();
     final message = Message(
-        topic: 'phoenix',
-        event: ChannelEvents.heartbeat,
-        payload: {},
-        ref: pendingHeartbeatRef);
+      topic: 'phoenix',
+      event: ChannelEvents.heartbeat,
+      payload: {},
+      ref: pendingHeartbeatRef,
+    );
     push(message);
   }
 
@@ -282,8 +302,10 @@ class RealtimeClient {
     _flushSendBuffer();
     reconnectTimer.reset();
     if (heartbeatTimer != null) heartbeatTimer!.cancel();
-    heartbeatTimer = Timer.periodic(Duration(milliseconds: heartbeatIntervalMs),
-        (Timer t) => sendHeartbeat());
+    heartbeatTimer = Timer.periodic(
+      Duration(milliseconds: heartbeatIntervalMs),
+      (Timer t) => sendHeartbeat(),
+    );
     for (final callback in stateChangeCallbacks['open']!) {
       callback();
     }

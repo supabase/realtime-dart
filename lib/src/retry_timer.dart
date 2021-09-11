@@ -48,8 +48,10 @@ class RetryTimer {
   }
 
   // Generate an exponential backoff function with first and max delays
-  static TimerCalculation createRetryFunction(
-      {int firstDelay = 1000, int maxDelay = 10000}) {
+  static TimerCalculation createRetryFunction({
+    int firstDelay = 1000,
+    int maxDelay = 10000,
+  }) {
     return (int tries) {
       final shiftAmount = (tries - 1) > maxShift ? maxShift : tries - 1;
       final delay = firstDelay << shiftAmount;

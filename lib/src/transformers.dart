@@ -43,8 +43,12 @@ class PostgresColumn {
   /// the type modifier. eg: 4294967295
   int? typeModifier;
 
-  PostgresColumn(this.name, this.type,
-      {this.flags = const [], this.typeModifier});
+  PostgresColumn(
+    this.name,
+    this.type, {
+    this.flags = const [],
+    this.typeModifier,
+  });
 }
 
 /// Takes an array of columns and an object of string values then converts each string value
@@ -59,8 +63,10 @@ class PostgresColumn {
 /// => { first_name: 'Paul', age: 33 }
 /// ```
 Map<String, dynamic> convertChangeData(
-    List<Map<String, dynamic>> columns, Map<String, dynamic> records,
-    {List<String>? skipTypes}) {
+  List<Map<String, dynamic>> columns,
+  Map<String, dynamic> records, {
+  List<String>? skipTypes,
+}) {
   final result = <String, dynamic>{};
   final _skipTypes = skipTypes ?? [];
   final parsedColumns = <PostgresColumn>[];
@@ -92,8 +98,12 @@ Map<String, dynamic> convertChangeData(
 /// convertColumn('age', [{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], ['Paul', '33'], ['int4'])
 /// => "33"
 /// ```
-dynamic convertColumn(String columnName, List<PostgresColumn> columns,
-    Map<String, dynamic> records, List<String> skipTypes) {
+dynamic convertColumn(
+  String columnName,
+  List<PostgresColumn> columns,
+  Map<String, dynamic> records,
+  List<String> skipTypes,
+) {
   final column = columns.firstWhereOrNull((x) => x.name == columnName);
   final columnValue = records[columnName];
   final columnValueStr = columnValue == null

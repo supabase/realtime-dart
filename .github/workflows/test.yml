@@ -1,9 +1,5 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Test
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
 on:
   push:
     branches: [main]
@@ -11,18 +7,24 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test:
+    name: Test / OS ${{ matrix.os }} / Node ${{ matrix.node }} / SDK ${{ matrix.sdk }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node: ["12"]
+        sdk: [stable, beta, dev]
 
-    container:
-      image: google/dart:latest
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checks-out repo
         uses: actions/checkout@v2
 
-      - name: Print Dart SDK version
-        run: dart --version
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.sdk }}
 
       - name: Install dependencies
         run: dart pub get

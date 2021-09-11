@@ -9,8 +9,10 @@ void main() {
   });
 
   test('transformers toTimestampString', () {
-    expect(toTimestampString('2020-10-30 12:34:56'),
-        equals('2020-10-30T12:34:56'));
+    expect(
+      toTimestampString('2020-10-30 12:34:56'),
+      equals('2020-10-30T12:34:56'),
+    );
   });
 
   test('transformers toBoolean', () {
@@ -29,11 +31,11 @@ void main() {
 
   test('transformers toDateRange', () {
     expect(
-        toDateRange('["2020-10-30 12:34:56", "2020-11-01 01:23:45"]'),
-        equals([
-          DateTime(2020, 10, 30, 12, 34, 56),
-          DateTime(2020, 11, 1, 1, 23, 45)
-        ]));
+      toDateRange('["2020-10-30 12:34:56", "2020-11-01 01:23:45"]'),
+      equals(
+        [DateTime(2020, 10, 30, 12, 34, 56), DateTime(2020, 11, 1, 1, 23, 45)],
+      ),
+    );
   });
 
   test('transformers convertChangeData', () {
@@ -58,8 +60,11 @@ void main() {
       }
     ];
     final records = {'id': 253, 'name': 'Singapore', 'continent': null};
-    expect(convertChangeData(columns, records),
-        {'id': 253, 'name': 'Singapore', 'continent': null});
+    expect(convertChangeData(columns, records), {
+      'id': 253,
+      'name': 'Singapore',
+      'continent': null,
+    });
   });
 
   group('convertCell', () {
