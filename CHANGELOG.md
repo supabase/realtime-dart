@@ -1,3 +1,7 @@
+## [0.1.11]
+
+- chore: added X-Client-Info header
+
 ## [0.1.10]
 
 - fix: converted `Callback` from typedef` to function types
