@@ -59,8 +59,8 @@ class PostgresColumn {
 /// `skipTypes` The array of types that should not be converted
 ///
 /// ```dart
-/// convertChangeData([{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], {first_name: 'Paul', age:'33'}, {})
-/// => { first_name: 'Paul', age: 33 }
+/// convertChangeData([{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], {'first_name': 'Paul', 'age':'33'}, {})
+/// => { 'first_name': 'Paul', 'age': 33 }
 /// ```
 Map<String, dynamic> convertChangeData(
   List<Map<String, dynamic>> columns,
