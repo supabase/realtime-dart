@@ -31,14 +31,14 @@ enum PostgresTypes {
 }
 
 class PostgresColumn {
-  /// any special flags for the column. eg: ["key"]
-  List<String> flags;
-
   /// the column name. eg: "user_id"
   String name;
 
   /// the column type. eg: "uuid"
   String type;
+
+  /// any special flags for the column. eg: ["key"]
+  List<String>? flags;
 
   /// the type modifier. eg: 4294967295
   int? typeModifier;
@@ -55,7 +55,7 @@ class PostgresColumn {
 /// to its mapped type.
 ///
 /// `columns` All of the columns
-/// `records` The map of string values
+/// `record` The map of string values
 /// `skipTypes` The array of types that should not be converted
 ///
 /// ```dart
@@ -64,7 +64,7 @@ class PostgresColumn {
 /// ```
 Map<String, dynamic> convertChangeData(
   List<Map<String, dynamic>> columns,
-  Map<String, dynamic> records, {
+  Map<String, dynamic> record, {
   List<String>? skipTypes,
 }) {
   final result = <String, dynamic>{};
@@ -79,8 +79,8 @@ Map<String, dynamic> convertChangeData(
     }
   }
 
-  records.forEach((key, value) {
-    result[key] = convertColumn(key, parsedColumns, records, _skipTypes);
+  record.forEach((key, value) {
+    result[key] = convertColumn(key, parsedColumns, record, _skipTypes);
   });
   return result;
 }
@@ -101,22 +101,21 @@ Map<String, dynamic> convertChangeData(
 dynamic convertColumn(
   String columnName,
   List<PostgresColumn> columns,
-  Map<String, dynamic> records,
+  Map<String, dynamic> record,
   List<String> skipTypes,
 ) {
   final column = columns.firstWhereOrNull((x) => x.name == columnName);
-  final columnValue = records[columnName];
+  final columnValue = record[columnName];
   final columnValueStr = columnValue == null
       ? null
       : columnValue is String
           ? columnValue
           : columnValue.toString();
 
-  if (column == null || skipTypes.contains(column.type)) {
-    return noop(columnValueStr);
-  } else {
+  if (column != null && !skipTypes.contains(column.type)) {
     return convertCell(column.type, columnValueStr);
   }
+  return noop(columnValueStr);
 }
 
 /// If the value of the cell is `null`, returns null.
@@ -133,74 +132,50 @@ dynamic convertColumn(
 /// @example convertCell('_int4', '{1,2,3,4}')
 /// => [1,2,3,4]
 /// ```
-dynamic convertCell(String type, String? stringValue) {
-  try {
-    if (stringValue == null) return null;
+dynamic convertCell(String type, dynamic value) {
+  // if data type is an array
+  if (type[0] == '_') {
+    final dataType = type.substring(1);
+    return toArray(value, dataType);
+  }
 
-    // if data type is an array
-    if (type[0] == '_') {
-      final arrayType = type.substring(1, type.length);
-      return toArray(type: arrayType, stringValue: stringValue);
-    }
-
-    final typeEnum = PostgresTypes.values
-        .firstWhereOrNull((e) => e.toString() == 'PostgresTypes.$type');
-    // If not null, convert to correct type.
-    switch (typeEnum) {
-      case PostgresTypes.abstime:
-        return noop(stringValue); // To allow users to cast it based on Timezone
-      case PostgresTypes.bool:
-        return toBoolean(stringValue);
-      case PostgresTypes.date:
-        return noop(stringValue); // To allow users to cast it based on Timezone
-      case PostgresTypes.daterange:
-        return toDateRange(stringValue);
-      case PostgresTypes.float4:
-        return toDouble(stringValue);
-      case PostgresTypes.float8:
-        return toDouble(stringValue);
-      case PostgresTypes.int2:
-        return toInt(stringValue);
-      case PostgresTypes.int4:
-        return toInt(stringValue);
-      case PostgresTypes.int4range:
-        return toIntRange(stringValue);
-      case PostgresTypes.int8:
-        return toInt(stringValue);
-      case PostgresTypes.int8range:
-        return toIntRange(stringValue);
-      case PostgresTypes.json:
-        return toJson(stringValue);
-      case PostgresTypes.jsonb:
-        return toJson(stringValue);
-      case PostgresTypes.money:
-        return toDouble(stringValue);
-      case PostgresTypes.numeric:
-        return toDouble(stringValue);
-      case PostgresTypes.oid:
-        return toInt(stringValue);
-      case PostgresTypes.reltime:
-        return noop(stringValue); // To allow users to cast it based on Timezone
-      case PostgresTypes.time:
-        return noop(stringValue); // To allow users to cast it based on Timezone
-      case PostgresTypes.timestamp:
-        return toTimestampString(stringValue); // Tobe consistent with PostgREST
-      case PostgresTypes.timestamptz:
-        return noop(stringValue); // To allow users to cast it based on Timezone
-      case PostgresTypes.timetz:
-        return noop(stringValue); // To allow users to cast it based on Timezone
-      case PostgresTypes.tsrange:
-        return toDateRange(stringValue);
-      case PostgresTypes.tstzrange:
-        return toDateRange(stringValue);
-      default:
-        // All the rest will be returned as strings
-        return noop(stringValue);
-    }
-  } catch (error) {
-    //print('Could not convert cell of type $type and value $stringValue');
-    //print('This is the error: $error');
-    return stringValue;
+  final typeEnum = PostgresTypes.values
+      .firstWhereOrNull((e) => e.toString() == 'PostgresTypes.$type');
+  // If not null, convert to correct type.
+  switch (typeEnum) {
+    case PostgresTypes.bool:
+      return toBoolean(value);
+    case PostgresTypes.float4:
+    case PostgresTypes.float8:
+    case PostgresTypes.numeric:
+      return toDouble(value);
+    case PostgresTypes.int2:
+    case PostgresTypes.int4:
+    case PostgresTypes.int8:
+    case PostgresTypes.oid:
+      return toInt(value);
+    case PostgresTypes.json:
+    case PostgresTypes.jsonb:
+      return toJson(value);
+    case PostgresTypes.timestamp:
+      return toTimestampString(value); // Format to be consistent with PostgREST
+    case PostgresTypes.abstime: // To allow users to cast it based on Timezone
+    case PostgresTypes.date: // To allow users to cast it based on Timezone
+    case PostgresTypes.daterange:
+    case PostgresTypes.int4range:
+    case PostgresTypes.int8range:
+    case PostgresTypes.money:
+    case PostgresTypes.reltime: // To allow users to cast it based on Timezone
+    case PostgresTypes.time: // To allow users to cast it based on Timezone
+    case PostgresTypes
+        .timestamptz: // To allow users to cast it based on Timezone
+    case PostgresTypes.timetz: // To allow users to cast it based on Timezone
+    case PostgresTypes.tsrange:
+    case PostgresTypes.tstzrange:
+      return noop(value);
+    default:
+      // Return the value for remaining types
+      return noop(value);
   }
 }
 
@@ -212,9 +187,9 @@ dynamic convertCell(String type, String? stringValue) {
 /// @example toArray('{}', 'int4')
 /// //=> []
 ///  ```
-List<dynamic> toArray({required String type, required String stringValue}) {
+List<dynamic> toArray(dynamic recordValue, String type) {
   // this takes off the '{' & '}'
-  final stringEnriched = stringValue.substring(1, stringValue.length - 1);
+  final stringEnriched = recordValue.substring(1, recordValue.length - 1);
 
   // converts the string into an array
   // if string is empty (meaning the array was empty), an empty array will be immediately returned
