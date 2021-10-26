@@ -179,24 +179,85 @@ dynamic convertCell(String type, dynamic value) {
   }
 }
 
+dynamic noop(dynamic value) {
+  return value;
+}
+
+bool? toBoolean(dynamic value) {
+  switch (value) {
+    case 't':
+      return true;
+    case 'f':
+      return false;
+    default:
+      return value as bool;
+  }
+}
+
+dynamic toDouble(dynamic value) {
+  if (value is String) {
+    try {
+      return double.parse(value);
+    } catch (_) {}
+  }
+  return value;
+}
+
+dynamic toInt(dynamic value) {
+  if (value is String) {
+    try {
+      return int.parse(value);
+    } catch (_) {}
+  }
+  return value;
+}
+
+dynamic toIntRange(dynamic value) {
+  if (value is String) {
+    final arr = json.decode(value);
+    return [int.parse(arr[0] as String), int.parse(arr[1] as String)];
+  }
+  return value;
+}
+
+dynamic toJson(dynamic value) {
+  if (value is String) {
+    try {
+      return json.decode(value);
+    } catch (error) {
+      print('JSON parse error: $error');
+      return value;
+    }
+  }
+  return value;
+}
+
 /// Converts a Postgres Array into a native JS array
 ///
 ///``` dart
-/// @example toArray('{1,2,3,4}', 'int4')
+/// @example toArray('{"[2021-01-01,2021-12-31)","(2021-01-01,2021-12-32]"}', 'daterange')
+/// //=> ['[2021-01-01,2021-12-31)', '(2021-01-01,2021-12-32]']
+/// @example toArray([1,2,3,4], 'int4')
 /// //=> [1,2,3,4]
-/// @example toArray('{}', 'int4')
-/// //=> []
 ///  ```
-List<dynamic> toArray(dynamic recordValue, String type) {
-  // this takes off the '{' & '}'
-  final stringEnriched = recordValue.substring(1, recordValue.length - 1);
+dynamic toArray(dynamic value, String type) {
+  if (value is! String) {
+    return value;
+  }
 
-  // converts the string into an array
-  // if string is empty (meaning the array was empty), an empty array will be immediately returned
-  final stringArray =
-      stringEnriched.isNotEmpty ? stringEnriched.split(',') : <String>[];
-  final array = stringArray.map((string) => convertCell(type, string)).toList();
-  return array;
+  // trim Postgres array curly brackets
+  final lastIdx = value.length - 1;
+  final closeBrace = value[lastIdx];
+  final openBrace = value[0];
+
+  if (openBrace == '{' && closeBrace == '}') {
+    final valTrim = value.substring(1, lastIdx);
+    final arr = json.decode('[$valTrim]') as List;
+
+    return arr.map((val) => convertCell(type, val)).toList();
+  }
+
+  return value;
 }
 
 /// Fixes timestamp to be ISO-8601. Swaps the space between the date and time for a 'T'
@@ -206,47 +267,9 @@ List<dynamic> toArray(dynamic recordValue, String type) {
 /// @example toTimestampString('2019-09-10 00:00:00')
 /// => '2019-09-10T00:00:00'
 /// ```
-String toTimestampString(String stringValue) {
-  return stringValue.replaceAll(' ', 'T');
-}
-
-String? noop(String? stringValue) {
-  return stringValue;
-}
-
-bool? toBoolean(String? stringValue) {
-  switch (stringValue) {
-    case 't':
-      return true;
-    case 'f':
-      return false;
-    default:
-      return null;
+dynamic toTimestampString(dynamic value) {
+  if (value is String) {
+    return value.replaceAll(' ', 'T');
   }
-}
-
-DateTime toDate(String stringValue) {
-  return DateTime.parse(stringValue);
-}
-
-List<DateTime> toDateRange(String stringValue) {
-  final arr = json.decode(stringValue);
-  return [DateTime.parse(arr[0] as String), DateTime.parse(arr[1] as String)];
-}
-
-double toDouble(String stringValue) {
-  return double.parse(stringValue);
-}
-
-int toInt(String stringValue) {
-  return int.parse(stringValue);
-}
-
-List<int> toIntRange(String stringValue) {
-  final arr = json.decode(stringValue);
-  return [int.parse(arr[0] as String), int.parse(arr[1] as String)];
-}
-
-dynamic toJson(String stringValue) {
-  return json.decode(stringValue);
+  return value;
 }

@@ -23,15 +23,6 @@ void main() {
     expect(noop('abc'), equals('abc'));
   });
 
-  test('transformers toDateRange', () {
-    expect(
-      toDateRange('["2020-10-30 12:34:56", "2020-11-01 01:23:45"]'),
-      equals(
-        [DateTime(2020, 10, 30, 12, 34, 56), DateTime(2020, 11, 1, 1, 23, 45)],
-      ),
-    );
-  });
-
   group('transformers convertChangeData', () {
     test('with basic usecase', () {
       final columns = [
@@ -140,18 +131,18 @@ void main() {
   });
 
   test('transformers toArray', () {
-    expect(toArray(type: 'int4', stringValue: '{}'), equals([]));
-    expect(toArray(type: 'int4', stringValue: '{1}'), equals([1]));
-    expect(toArray(type: 'int4', stringValue: '{1,2,3}'), equals([1, 2, 3]));
+    expect(toArray('{}', 'int4'), equals([]));
+    expect(toArray('{1}', 'int4'), equals([1]));
+    expect(toArray('{1,2,3}', 'int4'), equals([1, 2, 3]));
     expect(
       toArray(
-        type: 'daterange',
-        stringValue: '{"[2021-01-01,2021-12-31)","(2021-01-01,2021-12-32]"}',
+        '{"[2021-01-01,2021-12-31)","(2021-01-01,2021-12-32]"}',
+        'daterange',
       ),
       ['[2021-01-01,2021-12-31)', '(2021-01-01,2021-12-32]'],
     );
     expect(
-      toArray(type: 'int8', stringValue: [99, 999, 9999, 99999]),
+      toArray([99, 999, 9999, 99999], 'int8'),
       [99, 999, 9999, 99999],
     );
   });
