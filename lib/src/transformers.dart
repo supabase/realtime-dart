@@ -23,6 +23,7 @@ enum PostgresTypes {
   oid,
   reltime,
   time,
+  text,
   timestamp,
   timestamptz,
   timetz,
@@ -166,6 +167,7 @@ dynamic convertCell(String type, dynamic value) {
     case PostgresTypes.int8range:
     case PostgresTypes.money:
     case PostgresTypes.reltime: // To allow users to cast it based on Timezone
+    case PostgresTypes.text:
     case PostgresTypes.time: // To allow users to cast it based on Timezone
     case PostgresTypes
         .timestamptz: // To allow users to cast it based on Timezone
@@ -250,9 +252,18 @@ dynamic toArray(dynamic value, String type) {
   final closeBrace = value[lastIdx];
   final openBrace = value[0];
 
+  // Confirm value is a Postgres array by checking curly brackets
   if (openBrace == '{' && closeBrace == '}') {
     final valTrim = value.substring(1, lastIdx);
-    final arr = json.decode('[$valTrim]') as List;
+    List arr;
+
+    // TODO: find a better solution to separate Postgres array data
+    try {
+      arr = json.decode('[$valTrim]') as List;
+    } catch (_) {
+      // WARNING: splitting on comma does not cover all edge cases
+      arr = valTrim != '' ? valTrim.split(',') : [];
+    }
 
     return arr.map((val) => convertCell(type, val)).toList();
   }
