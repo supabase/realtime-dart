@@ -183,14 +183,14 @@ dynamic noop(dynamic value) {
   return value;
 }
 
-bool? toBoolean(dynamic value) {
+dynamic toBoolean(dynamic value) {
   switch (value) {
     case 't':
       return true;
     case 'f':
       return false;
     default:
-      return value as bool;
+      return value;
   }
 }
 

@@ -12,9 +12,9 @@ void main() {
   test('transformers toBoolean', () {
     expect(toBoolean('t'), isTrue);
     expect(toBoolean('f'), isFalse);
-    expect(toBoolean('abc'), isNull);
+    expect(toBoolean('abc'), 'abc');
     expect(toBoolean(null), isNull);
-    expect(toBoolean(''), isNull);
+    expect(toBoolean(''), '');
   });
 
   test('transformers noop', () {
@@ -92,7 +92,7 @@ void main() {
   group('convertCell', () {
     test('bool', () {
       expect(convertCell('bool', 't'), isTrue);
-      expect(convertCell('bool', 'true'), isTrue);
+      expect(convertCell('bool', true), isTrue);
     });
 
     test('int8', () {
