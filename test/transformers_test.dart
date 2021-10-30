@@ -12,9 +12,9 @@ void main() {
   test('transformers toBoolean', () {
     expect(toBoolean('t'), isTrue);
     expect(toBoolean('f'), isFalse);
-    expect(toBoolean('abc'), throwsException);
+    expect(toBoolean(true), isTrue);
+    expect(toBoolean(false), isFalse);
     expect(toBoolean(null), isNull);
-    expect(toBoolean(''), throwsException);
   });
 
   test('transformers noop', () {
@@ -110,7 +110,9 @@ void main() {
     });
 
     test('float8', () {
-      expect(convertCell('float8', null), isNull);
+      expect(convertCell('float8', '1.23'), 1.23);
+      expect(convertCell('float8', 1.23), 1.23);
+      expect(convertCell('float8', null), null);
     });
 
     test('json', () {
@@ -122,6 +124,7 @@ void main() {
       expect(convertCell('_int4', '{}'), equals([]));
       expect(convertCell('_int4', '{1}'), equals([1]));
       expect(convertCell('_int4', '{1,2,3}'), equals([1, 2, 3]));
+      expect(convertCell('_int4', [1, 2, 3]), equals([1, 2, 3]));
     });
 
     test('_varchar', () {

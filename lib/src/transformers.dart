@@ -185,33 +185,42 @@ dynamic noop(dynamic value) {
   return value;
 }
 
-dynamic toBoolean(dynamic value) {
+bool? toBoolean(dynamic value) {
   switch (value) {
     case 't':
       return true;
     case 'f':
       return false;
     default:
-      return value;
+      if (value is bool) {
+        return value;
+      }
+      return null;
   }
 }
 
-dynamic toDouble(dynamic value) {
+double? toDouble(dynamic value) {
   if (value is String) {
     try {
       return double.parse(value);
     } catch (_) {}
   }
-  return value;
+  if (value is double) {
+    return value;
+  }
+  return null;
 }
 
-dynamic toInt(dynamic value) {
+int? toInt(dynamic value) {
   if (value is String) {
     try {
       return int.parse(value);
     } catch (_) {}
   }
-  return value;
+  if (value is int) {
+    return value;
+  }
+  return null;
 }
 
 dynamic toIntRange(dynamic value) {
