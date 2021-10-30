@@ -12,9 +12,9 @@ void main() {
   test('transformers toBoolean', () {
     expect(toBoolean('t'), isTrue);
     expect(toBoolean('f'), isFalse);
-    expect(toBoolean('abc'), 'abc');
+    expect(toBoolean('abc'), throwsException);
     expect(toBoolean(null), isNull);
-    expect(toBoolean(''), '');
+    expect(toBoolean(''), throwsException);
   });
 
   test('transformers noop', () {
@@ -48,7 +48,7 @@ void main() {
       final records = {'id': '253', 'name': 'Singapore', 'continent': null};
       expect(
         convertChangeData(columns, records),
-        {'id': 253, 'name': 'Singapore', 'continent': null},
+        equals({'id': 253, 'name': 'Singapore', 'continent': null}),
       );
     });
 
@@ -114,7 +114,8 @@ void main() {
     });
 
     test('json', () {
-      expect(convertCell('json', '"[1,2,3]"'), '[1,2,3]');
+      expect(convertCell('json', '"[1,2,3]"'), equals('[1,2,3]'));
+      expect(convertCell('json', '[1,2,3]'), equals([1, 2, 3]));
     });
 
     test('_int4', () {
@@ -139,11 +140,11 @@ void main() {
         '{"[2021-01-01,2021-12-31)","(2021-01-01,2021-12-32]"}',
         'daterange',
       ),
-      ['[2021-01-01,2021-12-31)', '(2021-01-01,2021-12-32]'],
+      equals(['[2021-01-01,2021-12-31)', '(2021-01-01,2021-12-32]']),
     );
     expect(
       toArray([99, 999, 9999, 99999], 'int8'),
-      [99, 999, 9999, 99999],
+      equals([99, 999, 9999, 99999]),
     );
   });
 }
