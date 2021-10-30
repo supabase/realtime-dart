@@ -279,9 +279,9 @@ dynamic toArray(dynamic value, String type) {
 /// @example toTimestampString('2019-09-10 00:00:00')
 /// => '2019-09-10T00:00:00'
 /// ```
-String toTimestampString(dynamic value) {
+String? toTimestampString(dynamic value) {
   if (value is String) {
     return value.replaceAll(' ', 'T');
   }
-  return '';
+  return null;
 }
