@@ -223,14 +223,6 @@ int? toInt(dynamic value) {
   return null;
 }
 
-dynamic toIntRange(dynamic value) {
-  if (value is String) {
-    final arr = json.decode(value);
-    return [int.parse(arr[0] as String), int.parse(arr[1] as String)];
-  }
-  return value;
-}
-
 dynamic toJson(dynamic value) {
   if (value is String) {
     try {
@@ -243,7 +235,7 @@ dynamic toJson(dynamic value) {
   return value;
 }
 
-/// Converts a Postgres Array into a native JS array
+/// Converts a Postgres Array into a native Dart array
 ///
 ///``` dart
 /// @example toArray('{"[2021-01-01,2021-12-31)","(2021-01-01,2021-12-32]"}', 'daterange')
