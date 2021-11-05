@@ -50,7 +50,6 @@ void main() {
         'error': [],
         'message': [],
       });
-      expect(socket.transport is WebSocketChannelClosure, true);
       expect(socket.timeout, const Duration(milliseconds: 10000));
       expect(socket.longpollerTimeout, 20000);
       expect(socket.heartbeatIntervalMs, 30000);
@@ -62,7 +61,6 @@ void main() {
         ),
         false,
       );
-      expect(socket.reconnectAfterMs is Function, true);
       expect(
         socket.headers['X-Client-Info']!.split('/').first,
         'realtime-dart',
@@ -89,7 +87,6 @@ void main() {
         'error': [],
         'message': [],
       });
-      expect(socket.transport is WebSocketChannelClosure, true);
       expect(socket.timeout, const Duration(milliseconds: 40000));
       expect(socket.longpollerTimeout, 50000);
       expect(socket.heartbeatIntervalMs, 60000);
@@ -101,7 +98,6 @@ void main() {
         ),
         true,
       );
-      expect(socket.reconnectAfterMs is Function, true);
       expect(socket.headers['X-Client-Info'], 'supabase-dart/0.0.0');
     });
   });
