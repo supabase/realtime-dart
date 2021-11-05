@@ -1,3 +1,7 @@
+## [0.1.12]
+
+- feat: update transformers to accept already transformed walrus changes
+
 ## [0.1.11]
 
 - chore: added X-Client-Info header
