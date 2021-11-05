@@ -159,7 +159,8 @@ dynamic convertCell(String type, dynamic value) {
     case PostgresTypes.jsonb:
       return toJson(value);
     case PostgresTypes.timestamp:
-      return toTimestampString(value); // Format to be consistent with PostgREST
+      return toTimestampString(
+          value.toString()); // Format to be consistent with PostgREST
     case PostgresTypes.abstime: // To allow users to cast it based on Timezone
     case PostgresTypes.date: // To allow users to cast it based on Timezone
     case PostgresTypes.daterange:
@@ -279,7 +280,7 @@ dynamic toArray(dynamic value, String type) {
 /// @example toTimestampString('2019-09-10 00:00:00')
 /// => '2019-09-10T00:00:00'
 /// ```
-String? toTimestampString(dynamic value) {
+String? toTimestampString(String value) {
   if (value is String) {
     return value.replaceAll(' ', 'T');
   }
