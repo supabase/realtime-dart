@@ -11,9 +11,12 @@ void main() {
 
   test('transformers toBoolean', () {
     expect(toBoolean('t'), isTrue);
+    expect(toBoolean('true'), isTrue);
     expect(toBoolean('f'), isFalse);
+    expect(toBoolean('false'), isFalse);
     expect(toBoolean(true), isTrue);
     expect(toBoolean(false), isFalse);
+    expect(toBoolean('some other string'), isNull);
     expect(toBoolean(null), isNull);
   });
 
