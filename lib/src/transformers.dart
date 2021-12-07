@@ -190,8 +190,10 @@ dynamic noop(dynamic value) {
 bool? toBoolean(dynamic value) {
   switch (value) {
     case 't':
+    case 'true':
       return true;
     case 'f':
+    case 'false':
       return false;
     default:
       if (value is bool) {
