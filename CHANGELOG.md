@@ -1,3 +1,7 @@
+## [0.1.12+1]
+
+- fix: parsing bug of boolean values on WALRUS
+
 ## [0.1.12]
 
 - feat: update transformers to accept already transformed walrus changes
