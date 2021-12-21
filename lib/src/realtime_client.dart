@@ -2,15 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
-import 'package:web_socket_channel/web_socket_channel.dart';
-
-import 'constants.dart';
-import 'message.dart';
-import 'realtime_subscription.dart';
-import 'retry_timer.dart';
-import 'websocket_stub.dart'
+import 'package:realtime_client/src/constants.dart';
+import 'package:realtime_client/src/message.dart';
+import 'package:realtime_client/src/realtime_subscription.dart';
+import 'package:realtime_client/src/retry_timer.dart';
+import 'package:realtime_client/src/websocket_stub.dart'
     if (dart.library.io) 'websocket_io.dart'
     if (dart.library.html) 'websocket_web.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 class RealtimeClient {
   List<RealtimeSubscription> channels = [];

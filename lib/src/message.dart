@@ -1,4 +1,4 @@
-import 'constants.dart';
+import 'package:realtime_client/src/constants.dart';
 
 class Message {
   String topic;

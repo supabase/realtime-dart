@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'constants.dart';
-import 'message.dart';
-import 'realtime_subscription.dart';
+import 'package:realtime_client/src/constants.dart';
+import 'package:realtime_client/src/message.dart';
+import 'package:realtime_client/src/realtime_subscription.dart';
 
 typedef Callback = void Function(dynamic response);
 
