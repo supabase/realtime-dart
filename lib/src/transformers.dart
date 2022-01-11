@@ -2,6 +2,7 @@
 // 3-clause BSD found here: https://raw.githubusercontent.com/epgsql/epgsql/devel/LICENSE
 
 import 'dart:convert';
+
 import 'package:collection/collection.dart' show IterableExtension;
 
 enum PostgresTypes {
@@ -107,16 +108,11 @@ dynamic convertColumn(
 ) {
   final column = columns.firstWhereOrNull((x) => x.name == columnName);
   final columnValue = record[columnName];
-  final columnValueStr = columnValue == null
-      ? null
-      : columnValue is String
-          ? columnValue
-          : columnValue.toString();
 
   if (column != null && !skipTypes.contains(column.type)) {
-    return convertCell(column.type, columnValueStr);
+    return convertCell(column.type, columnValue);
   }
-  return noop(columnValueStr);
+  return noop(columnValue);
 }
 
 /// If the value of the cell is `null`, returns null.
