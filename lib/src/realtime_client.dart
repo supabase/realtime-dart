@@ -23,6 +23,7 @@ class RealtimeClient {
   int longpollerTimeout = 20000;
   Timer? heartbeatTimer;
   String? pendingHeartbeatRef;
+  String? accessToken;
   int ref = 0;
 
   void Function(String? kind, String? msg, dynamic data)? logger;
@@ -32,7 +33,6 @@ class RealtimeClient {
       decode;
   late TimerCalculation reconnectAfterMs;
   late RetryTimer reconnectTimer;
-  late String? accessToken;
 
   WebSocketChannel? conn;
   List sendBuffer = [];
