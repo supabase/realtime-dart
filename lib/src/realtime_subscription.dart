@@ -1,7 +1,7 @@
-import 'constants.dart';
-import 'push.dart';
-import 'realtime_client.dart';
-import 'retry_timer.dart';
+import 'package:realtime_client/src/constants.dart';
+import 'package:realtime_client/src/push.dart';
+import 'package:realtime_client/src/realtime_client.dart';
+import 'package:realtime_client/src/retry_timer.dart';
 
 class Binding {
   String event;
