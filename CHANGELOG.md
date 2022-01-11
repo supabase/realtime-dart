@@ -1,3 +1,8 @@
+## [0.1.13]
+
+- feat: add setAuth to send user Access Token to Realtime Server
+- fix: don't apply toString() to json
+
 ## [0.1.12+1]
 
 - fix: parsing bug of boolean values on WALRUS
