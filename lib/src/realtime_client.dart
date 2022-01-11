@@ -25,13 +25,16 @@ class RealtimeClient {
   Timer? heartbeatTimer;
   String? pendingHeartbeatRef;
   int ref = 0;
-  late RetryTimer reconnectTimer;
+
   void Function(String? kind, String? msg, dynamic data)? logger;
   late void Function(dynamic payload, void Function(String result) callback)
       encode;
   late void Function(String payload, void Function(dynamic result) callback)
       decode;
   late TimerCalculation reconnectAfterMs;
+  late RetryTimer reconnectTimer;
+  late String? accessToken;
+
   WebSocketChannel? conn;
   List sendBuffer = [];
   Map<String, List<Function>> stateChangeCallbacks = {
@@ -295,6 +298,24 @@ class RealtimeClient {
       ref: pendingHeartbeatRef,
     );
     push(message);
+
+    setAuth(accessToken);
+  }
+
+  /// Sets the JWT access token used for channel subscription authorization and Realtime RLS.
+  ///
+  /// `token` A JWT strings.
+  void setAuth(String? token) {
+    accessToken = token;
+
+    for (final channel in channels) {
+      if (token != null) {
+        channel.updateJoinPayload({'user_token': token});
+      }
+      if (channel.joinedOnce && channel.isJoined()) {
+        channel.push(ChannelEvents.accessToken, {'access_token': token ?? ''});
+      }
+    }
   }
 
   void _onConnOpen() {

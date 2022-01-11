@@ -13,7 +13,7 @@ enum SocketStates { connecting, open, closing, closed, disconnected }
 
 enum ChannelStates { closed, errored, joined, joining, leaving }
 
-enum ChannelEvents { close, error, join, reply, leave, heartbeat }
+enum ChannelEvents { close, error, join, reply, leave, heartbeat, accessToken }
 
 extension SocketStatesName on SocketStates {
   String name() {
@@ -23,6 +23,9 @@ extension SocketStatesName on SocketStates {
 
 extension ChannelEventsName on ChannelEvents {
   String eventName() {
+    if (this == ChannelEvents.accessToken) {
+      return 'access_token';
+    }
     return 'phx_${toString().split('.').last}';
   }
 }
