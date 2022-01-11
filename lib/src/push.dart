@@ -60,6 +60,10 @@ class Push {
     _channel.socket.push(message);
   }
 
+  void updatePayload(Map<String, dynamic> payload) {
+    payload.addAll(this.payload);
+  }
+
   Push receive(String status, Callback callback) {
     if (_hasReceived(status)) {
       callback(_receivedResp['response']);

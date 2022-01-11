@@ -18,7 +18,7 @@ class RealtimeSubscription {
   late RetryTimer _rejoinTimer;
   List<Push> _pushBuffer = [];
   List<Binding> _bindings = [];
-  bool _joinedOnce = false;
+  bool joinedOnce = false;
   late Push _joinPush;
   final Duration _timeout;
 
@@ -78,10 +78,10 @@ class RealtimeSubscription {
   }
 
   Push subscribe({Duration? timeout}) {
-    if (_joinedOnce == true) {
+    if (joinedOnce == true) {
       throw "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance";
     } else {
-      _joinedOnce = true;
+      joinedOnce = true;
       rejoin(timeout ?? _timeout);
       return _joinPush;
     }
@@ -118,7 +118,7 @@ class RealtimeSubscription {
     Map<String, String> payload, {
     Duration? timeout,
   }) {
-    if (!_joinedOnce) {
+    if (!joinedOnce) {
       throw "tried to push '${event.eventName()}' to '$topic' before joining. Use channel.subscribe() before pushing events";
     }
     final pushEvent = Push(this, event, payload, timeout ?? _timeout);
@@ -130,6 +130,10 @@ class RealtimeSubscription {
     }
 
     return pushEvent;
+  }
+
+  void updateJoinPayload(Map<String, dynamic> payload) {
+    _joinPush.updatePayload(payload);
   }
 
   /// Leaves the channel

@@ -442,4 +442,46 @@ void main() {
       verifyNever(() => mockedSink.add(any()));
     });
   });
+
+  group('setAuth', () {
+    final updateJoinPayload = {'user_token': 'token123'};
+    final pushPayload = {'access_token': 'token123'};
+
+    test(
+        "sets access token, updates channels' join payload, and pushes token to channels",
+        () {
+      final mockedChannel1 = MockChannel();
+      when(() => mockedChannel1.joinedOnce).thenReturn(true);
+      when(() => mockedChannel1.isJoined()).thenReturn(true);
+      when(() => mockedChannel1.push(ChannelEvents.accessToken, pushPayload))
+          .thenReturn(MockPush());
+
+      final mockedChannel2 = MockChannel();
+      when(() => mockedChannel2.joinedOnce).thenReturn(true);
+      when(() => mockedChannel2.isJoined()).thenReturn(true);
+      when(() => mockedChannel2.push(ChannelEvents.accessToken, pushPayload))
+          .thenReturn(MockPush());
+
+      const tTopic1 = 'topic-1';
+      const tTopic2 = 'topic-2';
+
+      final mockedSocket = SocketWithMockedChannel(socketEndpoint);
+      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeSubscription>{
+        tTopic1: mockedChannel1,
+        tTopic2: mockedChannel2,
+      });
+
+      final channel1 = mockedSocket.channel(tTopic1);
+      final channel2 = mockedSocket.channel(tTopic2);
+
+      mockedSocket.setAuth('token123');
+
+      verify(() => channel1.updateJoinPayload(updateJoinPayload)).called(1);
+      verify(() => channel2.updateJoinPayload(updateJoinPayload)).called(1);
+      verify(() => channel1.push(ChannelEvents.accessToken, pushPayload))
+          .called(1);
+      verify(() => channel2.push(ChannelEvents.accessToken, pushPayload))
+          .called(1);
+    });
+  });
 }
