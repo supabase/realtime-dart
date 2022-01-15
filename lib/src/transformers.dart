@@ -200,27 +200,29 @@ bool? toBoolean(dynamic value) {
 }
 
 double? toDouble(dynamic value) {
-  if (value is String) {
-    try {
-      return double.parse(value);
-    } catch (_) {}
-  }
   if (value is double) {
     return value;
+  } else {
+    final temp = value.toString();
+    try {
+      return double.parse(temp);
+    } catch (_) {
+      return null;
+    }
   }
-  return null;
 }
 
 int? toInt(dynamic value) {
-  if (value is String) {
-    try {
-      return int.parse(value);
-    } catch (_) {}
-  }
   if (value is int) {
     return value;
+  } else {
+    final temp = value.toString();
+    try {
+      return int.parse(temp);
+    } catch (_) {
+      return null;
+    }
   }
-  return null;
 }
 
 dynamic toJson(dynamic value) {
