@@ -203,8 +203,8 @@ double? toDouble(dynamic value) {
   if (value is double) {
     return value;
   } else {
-    final temp = value.toString();
     try {
+      final temp = value.toString();
       return double.parse(temp);
     } catch (_) {
       return null;
@@ -216,8 +216,8 @@ int? toInt(dynamic value) {
   if (value is int) {
     return value;
   } else {
-    final temp = value.toString();
     try {
+      final temp = value.toString();
       return int.parse(temp);
     } catch (_) {
       return null;
