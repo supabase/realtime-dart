@@ -101,6 +101,9 @@ void main() {
     test('int8', () {
       expect(convertCell('int8', '10'), 10);
       expect(convertCell('int8', 10), 10);
+      expect(convertCell('int8', 10.25), null);
+      expect(convertCell('int8', null), null);
+      expect(convertCell('int8', ''), null);
     });
 
     test('numeric', () {
@@ -115,7 +118,10 @@ void main() {
     test('float8', () {
       expect(convertCell('float8', '1.23'), 1.23);
       expect(convertCell('float8', 1.23), 1.23);
+      expect(convertCell('float8', 250000), 250000.0);
+      expect(convertCell('float8', 1), 1.0);
       expect(convertCell('float8', null), null);
+      expect(convertCell('float8', ''), null);
     });
 
     test('json', () {
