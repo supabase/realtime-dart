@@ -1,3 +1,7 @@
+## [0.1.14]
+
+- fix: number transformers
+
 ## [0.1.13]
 
 - feat: add setAuth to send user Access Token to Realtime Server
