@@ -94,7 +94,7 @@ class RealtimeSubscription {
   void onError(Function(String?) callback) {
     on(
       ChannelEvents.error.eventName(),
-      (reason, {ref}) => callback(reason as String?),
+      (reason, {ref}) => callback(reason.toString()),
     );
   }
 
