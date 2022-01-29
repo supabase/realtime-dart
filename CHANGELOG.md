@@ -1,3 +1,7 @@
+## [0.1.15]
+
+- fix: use toString() instead of type cast error response
+
 ## [0.1.14]
 
 - fix: number transformers
