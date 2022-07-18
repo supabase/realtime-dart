@@ -3,9 +3,11 @@ import 'package:realtime_client/src/push.dart';
 import 'package:realtime_client/src/realtime_client.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 
+typedef BindingCallback = void Function(dynamic payload, {String? ref});
+
 class Binding {
   String event;
-  void Function(dynamic payload, {String? ref}) callback;
+  BindingCallback callback;
 
   Binding(this.event, this.callback);
 }
@@ -38,7 +40,7 @@ class RealtimeSubscription {
 
     onClose(() {
       _rejoinTimer.reset();
-      socket.log('channel', 'close $topic ${joinRef()}');
+      socket.log('channel', 'close $topic ${joinRef}');
       _state = ChannelStates.closed;
       socket.remove(this);
     });
@@ -85,17 +87,14 @@ class RealtimeSubscription {
     on(ChannelEvents.close.eventName(), (reason, {ref}) => callback());
   }
 
-  void onError(Function(String?) callback) {
+  void onError(void Function(String?) callback) {
     on(
       ChannelEvents.error.eventName(),
       (reason, {ref}) => callback(reason.toString()),
     );
   }
 
-  void on(
-    String event,
-    void Function(dynamic payload, {String? ref}) callback,
-  ) {
+  void on(String event, BindingCallback callback) {
     _bindings.add(Binding(event, callback));
   }
 
@@ -145,11 +144,15 @@ class RealtimeSubscription {
       trigger(
         ChannelEvents.close.eventName(),
         payload: {'type': 'leave'},
-        ref: joinRef(),
+        ref: joinRef,
       );
     }
 
     _state = ChannelStates.leaving;
+
+    // Destroy joinPush to avoid connection timeouts during unscription phase
+    _joinPush.destroy();
+
     final leavePush = Push(this, ChannelEvents.leave, {}, timeout ?? _timeout);
     leavePush
         .receive('ok', (_) => onClose())
@@ -174,18 +177,13 @@ class RealtimeSubscription {
     return this.topic == topic;
   }
 
-  String? joinRef() {
-    return _joinPush.ref;
-  }
-
-  void sendJoin(Duration timeout) {
-    _state = ChannelStates.joining;
-    _joinPush.resend(timeout);
-  }
+  String? get joinRef => _joinPush.ref;
 
   void rejoin([Duration? timeout]) {
     if (isLeaving) return;
-    sendJoin(timeout ?? _timeout);
+    socket.leaveOpenTopic(topic);
+    _state = ChannelStates.joining;
+    _joinPush.resend(timeout ?? _timeout);
   }
 
   void trigger(String event, {dynamic payload, String? ref}) {
@@ -193,12 +191,10 @@ class RealtimeSubscription {
       ChannelEvents.close,
       ChannelEvents.error,
       ChannelEvents.leave,
-      ChannelEvents.join
+      ChannelEvents.join,
     ].map((e) => e.eventName()).toSet();
 
-    if (ref != null && events.contains(event) && ref != joinRef()) {
-      return;
-    }
+    if (ref != null && events.contains(event) && ref != joinRef) return;
 
     final handledPayload = onMessage(event, payload, ref: ref);
     if (payload != null && handledPayload == null) {

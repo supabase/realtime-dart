@@ -34,18 +34,18 @@ enum PostgresTypes {
 
 class PostgresColumn {
   /// the column name. eg: "user_id"
-  String name;
+  final String name;
 
   /// the column type. eg: "uuid"
-  String type;
+  final String type;
 
   /// any special flags for the column. eg: ["key"]
-  List<String>? flags;
+  final List<String>? flags;
 
   /// the type modifier. eg: 4294967295
-  int? typeModifier;
+  final int? typeModifier;
 
-  PostgresColumn(
+  const PostgresColumn(
     this.name,
     this.type, {
     this.flags = const [],
@@ -192,9 +192,7 @@ bool? toBoolean(dynamic value) {
     case 'false':
       return false;
     default:
-      if (value is bool) {
-        return value;
-      }
+      if (value is bool) return value;
       return null;
   }
 }

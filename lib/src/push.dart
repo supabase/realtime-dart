@@ -51,22 +51,23 @@ class Push {
 
     startTimeout();
     sent = true;
-    final message = Message(
-      topic: _channel.topic,
-      payload: payload,
-      event: _event,
-      ref: ref,
+    _channel.socket.push(
+      Message(
+        topic: _channel.topic,
+        event: _event,
+        payload: payload,
+        ref: ref,
+      ),
     );
-    _channel.socket.push(message);
   }
 
   void updatePayload(Map<String, dynamic> payload) {
-    payload.addAll(this.payload);
+    this.payload.addAll(payload);
   }
 
   Push receive(String status, Callback callback) {
     if (_hasReceived(status)) {
-      callback(_receivedResp['response']);
+      callback(_receivedResp?['response']);
     }
 
     _recHooks.add(Hook(status, callback));
@@ -77,10 +78,9 @@ class Push {
     if (_timeoutTimer != null) return;
 
     _ref = _channel.socket.makeRef();
-    final event = _channel.replyEventName(ref);
-    _refEvent = event;
+    _refEvent = _channel.replyEventName(ref);
 
-    _channel.on(event, (dynamic payload, {ref}) {
+    _channel.on(_refEvent!, (dynamic payload, {ref}) {
       cancelRefEvent();
       cancelTimeout();
       _receivedResp = payload;
@@ -104,10 +104,13 @@ class Push {
     }
   }
 
+  void destroy() {
+    cancelRefEvent();
+    cancelTimeout();
+  }
+
   void cancelRefEvent() {
-    if (_refEvent == null) {
-      return;
-    }
+    if (_refEvent == null) return;
     _channel.off(_refEvent!);
   }
 
@@ -130,8 +133,8 @@ class Push {
 }
 
 class Hook {
-  String status;
-  Callback callback;
+  final String status;
+  final Callback callback;
 
-  Hook(this.status, this.callback);
+  const Hook(this.status, this.callback);
 }
