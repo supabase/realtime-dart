@@ -6,9 +6,8 @@ import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
 import 'package:realtime_client/src/realtime_subscription.dart';
 import 'package:realtime_client/src/retry_timer.dart';
+import 'package:realtime_client/src/websocket/websocket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-
-import 'websocket/websocket.dart';
 
 typedef WebSocketTransport = WebSocketChannel Function(
   String url,
