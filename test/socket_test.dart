@@ -106,7 +106,7 @@ void main() {
     test('returns endpoint for given full url', () {
       final socket = RealtimeClient('wss://example.org/chat');
       expect(
-        socket.endPointURL(),
+        socket.endPointURL,
         'wss://example.org/chat/websocket?vsn=1.0.0',
       );
     });
@@ -115,7 +115,7 @@ void main() {
       final socket =
           RealtimeClient('ws://example.org/chat', params: {'foo': 'bar'});
       expect(
-        socket.endPointURL(),
+        socket.endPointURL,
         'ws://example.org/chat/websocket?foo=bar&vsn=1.0.0',
       );
     });
@@ -128,7 +128,7 @@ void main() {
         },
       );
       expect(
-        socket.endPointURL(),
+        socket.endPointURL,
         'ws://example.org/chat/websocket?apikey=123456789&vsn=1.0.0',
       );
     });
@@ -208,14 +208,11 @@ void main() {
       expect(socket.conn, null);
     });
 
-    test('calls callback', () {
+    test('calls callback', () async {
       int closes = 0;
       socket.connect();
-      socket.disconnect(
-        callback: () {
-          closes += 1;
-        },
-      );
+      await socket.disconnect();
+      closes += 1;
 
       expect(closes, 1);
     });
@@ -232,7 +229,7 @@ void main() {
 
       when(() => mockedSocketChannel.sink).thenReturn(mockedSink);
       when(() => mockedSink.close(any(), any()))
-          .thenAnswer((_) => Future.value(null));
+          .thenAnswer((_) => Future.value());
 
       const tCode = 12;
       const tReason = 'reason';
@@ -292,10 +289,10 @@ void main() {
   group('remove', () {
     test('removes given channel from channels', () {
       final mockedChannel1 = MockChannel();
-      when(() => mockedChannel1.joinRef()).thenReturn('1');
+      when(() => mockedChannel1.joinRef).thenReturn('1');
 
       final mockedChannel2 = MockChannel();
-      when(() => mockedChannel2.joinRef()).thenReturn('2');
+      when(() => mockedChannel2.joinRef).thenReturn('2');
 
       const tTopic1 = 'topic-1';
       const tTopic2 = 'topic-2';
@@ -452,13 +449,13 @@ void main() {
         () {
       final mockedChannel1 = MockChannel();
       when(() => mockedChannel1.joinedOnce).thenReturn(true);
-      when(() => mockedChannel1.isJoined()).thenReturn(true);
+      when(() => mockedChannel1.isJoined).thenReturn(true);
       when(() => mockedChannel1.push(ChannelEvents.accessToken, pushPayload))
           .thenReturn(MockPush());
 
       final mockedChannel2 = MockChannel();
       when(() => mockedChannel2.joinedOnce).thenReturn(true);
-      when(() => mockedChannel2.isJoined()).thenReturn(true);
+      when(() => mockedChannel2.isJoined).thenReturn(true);
       when(() => mockedChannel2.push(ChannelEvents.accessToken, pushPayload))
           .thenReturn(MockPush());
 

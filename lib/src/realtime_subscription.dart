@@ -40,7 +40,7 @@ class RealtimeSubscription {
 
     onClose(() {
       _rejoinTimer.reset();
-      socket.log('channel', 'close $topic ${joinRef}');
+      socket.log('channel', 'close $topic $joinRef');
       _state = ChannelStates.closed;
       socket.remove(this);
     });
