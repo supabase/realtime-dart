@@ -6,10 +6,9 @@ import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
 import 'package:realtime_client/src/realtime_subscription.dart';
 import 'package:realtime_client/src/retry_timer.dart';
-import 'package:realtime_client/src/websocket_stub.dart'
-    if (dart.library.io) 'websocket_io.dart'
-    if (dart.library.html) 'websocket_web.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+
+import 'websocket/websocket.dart';
 
 class RealtimeClient {
   List<RealtimeSubscription> channels = [];
@@ -190,9 +189,7 @@ class RealtimeClient {
   }
 
   /// Retuns `true` is the connection is open.
-  bool isConnected() {
-    return connectionState() == 'open';
-  }
+  bool get isConnected => connectionState() == 'open';
 
   /// Removes a subscription from the socket.
   void remove(RealtimeSubscription channel) {
@@ -222,7 +219,7 @@ class RealtimeClient {
       message.payload,
     );
 
-    if (isConnected()) {
+    if (isConnected) {
       callback();
     } else {
       sendBuffer.add(callback);
@@ -277,7 +274,7 @@ class RealtimeClient {
   }
 
   void sendHeartbeat() {
-    if (!isConnected()) return;
+    if (!isConnected) return;
 
     if (pendingHeartbeatRef != null) {
       pendingHeartbeatRef = null;
@@ -311,7 +308,7 @@ class RealtimeClient {
       if (token != null) {
         channel.updateJoinPayload({'user_token': token});
       }
-      if (channel.joinedOnce && channel.isJoined()) {
+      if (channel.joinedOnce && channel.isJoined) {
         channel.push(ChannelEvents.accessToken, {'access_token': token ?? ''});
       }
     }
@@ -373,7 +370,7 @@ class RealtimeClient {
   }
 
   void _flushSendBuffer() {
-    if (isConnected() && sendBuffer.isNotEmpty) {
+    if (isConnected && sendBuffer.isNotEmpty) {
       for (final callback in sendBuffer) {
         callback();
       }

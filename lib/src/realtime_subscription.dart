@@ -44,18 +44,14 @@ class RealtimeSubscription {
     });
 
     onError((String? reason) {
-      if (isLeaving() || isClosed()) {
-        return;
-      }
+      if (isLeaving || isClosed) return;
       socket.log('channel', 'error $topic', reason);
       _state = ChannelStates.errored;
       _rejoinTimer.scheduleTimeout();
     });
 
     _joinPush.receive('timeout', (response) {
-      if (!isJoining()) {
-        return;
-      }
+      if (!isJoining) return;
       socket.log('channel', 'timeout $topic', _joinPush.timeout);
       _state = ChannelStates.errored;
       _rejoinTimer.scheduleTimeout();
@@ -72,9 +68,7 @@ class RealtimeSubscription {
 
   void rejoinUntilConnected() {
     _rejoinTimer.scheduleTimeout();
-    if (socket.isConnected()) {
-      rejoin();
-    }
+    if (socket.isConnected) rejoin();
   }
 
   Push subscribe({Duration? timeout}) {
@@ -109,8 +103,8 @@ class RealtimeSubscription {
     _bindings = _bindings.where((bind) => bind.event != event).toList();
   }
 
-  bool canPush() {
-    return socket.isConnected() && isJoined();
+  bool get canPush {
+    return socket.isConnected && isJoined;
   }
 
   Push push(
@@ -122,7 +116,7 @@ class RealtimeSubscription {
       throw "tried to push '${event.eventName()}' to '$topic' before joining. Use channel.subscribe() before pushing events";
     }
     final pushEvent = Push(this, event, payload, timeout ?? _timeout);
-    if (canPush()) {
+    if (canPush) {
       pushEvent.send();
     } else {
       pushEvent.startTimeout();
@@ -161,7 +155,7 @@ class RealtimeSubscription {
         .receive('ok', (_) => onClose())
         .receive('timeout', (_) => onClose());
     leavePush.send();
-    if (!canPush()) {
+    if (!canPush) {
       leavePush.trigger('ok', {});
     }
 
@@ -190,9 +184,7 @@ class RealtimeSubscription {
   }
 
   void rejoin([Duration? timeout]) {
-    if (isLeaving()) {
-      return;
-    }
+    if (isLeaving) return;
     sendJoin(timeout ?? _timeout);
   }
 
@@ -230,23 +222,13 @@ class RealtimeSubscription {
     return 'chan_reply_$ref';
   }
 
-  bool isClosed() {
-    return _state == ChannelStates.closed;
-  }
+  bool get isClosed => _state == ChannelStates.closed;
 
-  bool isErrored() {
-    return _state == ChannelStates.errored;
-  }
+  bool get isErrored => _state == ChannelStates.errored;
 
-  bool isJoined() {
-    return _state == ChannelStates.joined;
-  }
+  bool get isJoined => _state == ChannelStates.joined;
 
-  bool isJoining() {
-    return _state == ChannelStates.joining;
-  }
+  bool get isJoining => _state == ChannelStates.joining;
 
-  bool isLeaving() {
-    return _state == ChannelStates.leaving;
-  }
+  bool get isLeaving => _state == ChannelStates.leaving;
 }

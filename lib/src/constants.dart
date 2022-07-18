@@ -15,12 +15,6 @@ enum ChannelStates { closed, errored, joined, joining, leaving }
 
 enum ChannelEvents { close, error, join, reply, leave, heartbeat, accessToken }
 
-extension SocketStatesName on SocketStates {
-  String name() {
-    return toString().split('.').last;
-  }
-}
-
 extension ChannelEventsName on ChannelEvents {
   String eventName() {
     if (this == ChannelEvents.accessToken) {
