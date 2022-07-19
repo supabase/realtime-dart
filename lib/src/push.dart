@@ -115,7 +115,7 @@ class Push {
   }
 
   void cancelTimeout() {
-    _timeoutTimer!.cancel();
+    _timeoutTimer?.cancel();
     _timeoutTimer = null;
   }
 

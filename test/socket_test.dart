@@ -168,11 +168,11 @@ void main() {
 
       socket.sendHeartbeat();
       // need to wait for event to trigger
-      await Future.delayed(const Duration(seconds: 1), () {});
+      await Future.delayed(const Duration(seconds: 1));
       expect(lastMsg['event'], 'heartbeat');
 
       socket.disconnect();
-      await Future.delayed(const Duration(seconds: 1), () {});
+      await Future.delayed(const Duration(seconds: 1));
       expect(closes, 1);
     });
 
@@ -201,9 +201,10 @@ void main() {
     setUp(() {
       socket = RealtimeClient(socketEndpoint);
     });
-    test('removes existing connection', () {
+    test('removes existing connection', () async {
       socket.connect();
-      socket.disconnect();
+      await Future.delayed(const Duration(seconds: 1));
+      await socket.disconnect();
 
       expect(socket.conn, null);
     });

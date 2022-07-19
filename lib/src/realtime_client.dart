@@ -109,6 +109,7 @@ class RealtimeClient {
     try {
       connState = SocketStates.connecting;
       conn = transport(endPointURL, headers);
+      connState = SocketStates.open;
 
       _onConnOpen();
       conn!.stream.timeout(Duration(milliseconds: longpollerTimeout));
