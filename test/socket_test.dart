@@ -199,11 +199,10 @@ void main() {
   group('disconnect', () {
     late RealtimeClient socket;
     setUp(() {
-      socket = RealtimeClient(socketEndpoint);
+      socket = RealtimeClient('ws://localhost:${mockServer.port}');
     });
     test('removes existing connection', () async {
       socket.connect();
-      await Future.delayed(const Duration(seconds: 1));
       await socket.disconnect();
 
       expect(socket.conn, null);
