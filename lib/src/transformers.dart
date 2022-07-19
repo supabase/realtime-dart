@@ -70,7 +70,6 @@ Map<String, dynamic> convertChangeData(
   List<String>? skipTypes,
 }) {
   final result = <String, dynamic>{};
-  final _skipTypes = skipTypes ?? [];
   final parsedColumns = <PostgresColumn>[];
 
   for (final element in columns) {
@@ -82,7 +81,7 @@ Map<String, dynamic> convertChangeData(
   }
 
   record.forEach((key, value) {
-    result[key] = convertColumn(key, parsedColumns, record, _skipTypes);
+    result[key] = convertColumn(key, parsedColumns, record, skipTypes ?? []);
   });
   return result;
 }
