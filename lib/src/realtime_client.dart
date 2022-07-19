@@ -244,7 +244,7 @@ class RealtimeClient {
   /// Return the next message ref, accounting for overflows
   String makeRef() {
     final int newRef = ref + 1;
-    if (newRef == ref) {
+    if (newRef < 0) {
       ref = 0;
     } else {
       ref = newRef;
