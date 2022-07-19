@@ -34,18 +34,18 @@ enum PostgresTypes {
 
 class PostgresColumn {
   /// the column name. eg: "user_id"
-  String name;
+  final String name;
 
   /// the column type. eg: "uuid"
-  String type;
+  final String type;
 
   /// any special flags for the column. eg: ["key"]
-  List<String>? flags;
+  final List<String>? flags;
 
   /// the type modifier. eg: 4294967295
-  int? typeModifier;
+  final int? typeModifier;
 
-  PostgresColumn(
+  const PostgresColumn(
     this.name,
     this.type, {
     this.flags = const [],
@@ -70,7 +70,6 @@ Map<String, dynamic> convertChangeData(
   List<String>? skipTypes,
 }) {
   final result = <String, dynamic>{};
-  final _skipTypes = skipTypes ?? [];
   final parsedColumns = <PostgresColumn>[];
 
   for (final element in columns) {
@@ -82,7 +81,7 @@ Map<String, dynamic> convertChangeData(
   }
 
   record.forEach((key, value) {
-    result[key] = convertColumn(key, parsedColumns, record, _skipTypes);
+    result[key] = convertColumn(key, parsedColumns, record, skipTypes ?? []);
   });
   return result;
 }
@@ -192,9 +191,7 @@ bool? toBoolean(dynamic value) {
     case 'false':
       return false;
     default:
-      if (value is bool) {
-        return value;
-      }
+      if (value is bool) return value;
       return null;
   }
 }

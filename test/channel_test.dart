@@ -9,9 +9,9 @@ void main() {
 
   test('channel should be initially closed', () {
     final channel = RealtimeSubscription('topic', RealtimeClient('endpoint'));
-    expect(channel.isClosed(), isTrue);
-    channel.sendJoin(const Duration(seconds: 5));
-    expect(channel.isJoining(), isTrue);
+    expect(channel.isClosed, isTrue);
+    channel.rejoin(const Duration(seconds: 5));
+    expect(channel.isJoining, isTrue);
   });
 
   group('constructor', () {
@@ -21,7 +21,7 @@ void main() {
     });
 
     test('sets defaults', () {
-      expect(channel.isClosed(), true);
+      expect(channel.isClosed, true);
       expect(channel.topic, 'topic');
       expect(channel.params, {'one': 'two'});
       expect(channel.socket, socket);
@@ -37,7 +37,7 @@ void main() {
     test('sets state to joining', () {
       channel.subscribe();
 
-      expect(channel.isJoining(), true);
+      expect(channel.isJoining, true);
     });
 
     test('throws if attempting to join multiple times', () {
@@ -62,11 +62,11 @@ void main() {
     });
 
     test("sets state to 'errored'", () {
-      expect(channel.isErrored(), false);
+      expect(channel.isErrored, false);
 
       channel.trigger('phx_error');
 
-      expect(channel.isErrored(), true);
+      expect(channel.isErrored, true);
     });
   });
 
@@ -78,11 +78,11 @@ void main() {
     });
 
     test("sets state to 'closed'", () {
-      expect(channel.isClosed(), false);
+      expect(channel.isClosed, false);
 
       channel.trigger('phx_close');
 
-      expect(channel.isClosed(), true);
+      expect(channel.isClosed, true);
     });
   });
 
@@ -205,11 +205,11 @@ void main() {
     });
 
     test("sets state to closed on 'ok' event", () {
-      expect(channel.isClosed(), false);
+      expect(channel.isClosed, false);
 
       channel.unsubscribe().trigger('ok', {});
 
-      expect(channel.isClosed(), true);
+      expect(channel.isClosed, true);
     });
 
     test("able to unsubscribe from * subscription", () {
