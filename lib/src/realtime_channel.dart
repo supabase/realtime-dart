@@ -2,9 +2,12 @@ import 'package:realtime_client/src/bind.dart';
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/push.dart';
 import 'package:realtime_client/src/realtime_client.dart';
+import 'package:realtime_client/src/realtime_presence.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 
-class RealtimeSubscription {
+typedef BindingCallback = void Function(dynamic payload, {String? ref});
+
+class RealtimeChannel {
   ChannelStates _state = ChannelStates.closed;
   final String topic;
   final Map<String, dynamic> params;
@@ -15,13 +18,14 @@ class RealtimeSubscription {
   bool joinedOnce = false;
   late Push _joinPush;
   final Duration _timeout;
+  late RealtimePresence presence;
 
-  RealtimeSubscription(this.topic, this.socket, {this.params = const {}})
+  RealtimeChannel(this.topic, this.socket, {this.params = const {}})
       : _timeout = socket.timeout {
     _joinPush = Push(this, ChannelEvents.join, params, _timeout);
     _rejoinTimer =
         RetryTimer(() => rejoinUntilConnected(), socket.reconnectAfterMs);
-    _joinPush.receive('ok', (response) {
+    _joinPush.receive('ok', (_) {
       _state = ChannelStates.joined;
       _rejoinTimer.reset();
       for (final pushEvent in _pushBuffer) {
@@ -58,6 +62,12 @@ class RealtimeSubscription {
         payload: payload,
       ),
     );
+
+    presence = RealtimePresence(this);
+  }
+
+  List<dynamic> list() {
+    return presence.list();
   }
 
   void rejoinUntilConnected() {
@@ -69,6 +79,24 @@ class RealtimeSubscription {
     if (joinedOnce == true) {
       throw "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance";
     } else {
+      final configs = <String, Binding>{};
+      for (final binding in _bindings) {
+        final type = binding.type;
+        if (type != null &&
+            ![
+              'phx_close',
+              'phx_error',
+              'phx_reply',
+              'presence_diff',
+              'presence_state',
+            ].contains(type)) {
+          configs[type] = binding;
+        }
+      }
+      if (configs.keys.isNotEmpty) {
+        updateJoinPayload(configs);
+      }
+
       joinedOnce = true;
       rejoin(timeout ?? _timeout);
       return _joinPush;

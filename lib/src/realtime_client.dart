@@ -195,7 +195,7 @@ class RealtimeClient {
   bool get isConnected => connectionState == 'open';
 
   /// Removes a subscription from the socket.
-  void remove(RealtimeSubscription channel) {
+  void remove(dynamic channel) {
     channels = channels.where((c) => c.joinRef != channel.joinRef).toList();
   }
 
@@ -317,7 +317,7 @@ class RealtimeClient {
         channel.updateJoinPayload({'user_token': token});
       }
       if (channel.joinedOnce && channel.isJoined) {
-        channel.push(ChannelEvents.accessToken, {'access_token': token ?? ''});
+        channel.push(ChannelEvents.access_token, {'access_token': token ?? ''});
       }
     }
   }
@@ -380,7 +380,7 @@ class RealtimeClient {
 
   void _triggerChanError() {
     for (final channel in channels) {
-      channel.trigger(ChannelEvents.error.eventName());
+      channel.trigger(ChannelEvents.error.name);
     }
   }
 

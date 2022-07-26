@@ -319,12 +319,8 @@ void main() {
     const event = ChannelEvents.join;
     const payload = 'payload';
     const ref = 'ref';
-    final jsonData = json.encode({
-      'topic': topic,
-      'event': event.eventName(),
-      'payload': payload,
-      'ref': ref
-    });
+    final jsonData = json.encode(
+        {'topic': topic, 'event': event.name, 'payload': payload, 'ref': ref});
 
     IOWebSocketChannel mockedSocketChannel;
     late RealtimeClient mockedSocket;
@@ -450,13 +446,13 @@ void main() {
       final mockedChannel1 = MockChannel();
       when(() => mockedChannel1.joinedOnce).thenReturn(true);
       when(() => mockedChannel1.isJoined).thenReturn(true);
-      when(() => mockedChannel1.push(ChannelEvents.accessToken, pushPayload))
+      when(() => mockedChannel1.push(ChannelEvents.access_token, pushPayload))
           .thenReturn(MockPush());
 
       final mockedChannel2 = MockChannel();
       when(() => mockedChannel2.joinedOnce).thenReturn(true);
       when(() => mockedChannel2.isJoined).thenReturn(true);
-      when(() => mockedChannel2.push(ChannelEvents.accessToken, pushPayload))
+      when(() => mockedChannel2.push(ChannelEvents.access_token, pushPayload))
           .thenReturn(MockPush());
 
       const tTopic1 = 'topic-1';
@@ -475,9 +471,9 @@ void main() {
 
       verify(() => channel1.updateJoinPayload(updateJoinPayload)).called(1);
       verify(() => channel2.updateJoinPayload(updateJoinPayload)).called(1);
-      verify(() => channel1.push(ChannelEvents.accessToken, pushPayload))
+      verify(() => channel1.push(ChannelEvents.access_token, pushPayload))
           .called(1);
-      verify(() => channel2.push(ChannelEvents.accessToken, pushPayload))
+      verify(() => channel2.push(ChannelEvents.access_token, pushPayload))
           .called(1);
     });
   });
