@@ -1,13 +1,15 @@
 class Binding {
-  String event;
+  String? event;
   BindingCallback callback;
   String? type;
+  Map<String, String>? filter;
 
-  Binding(
+  Binding({
     this.event,
-    this.callback, [
+    required this.callback,
     this.type,
-  ]);
+    this.filter,
+  });
 }
 
 typedef BindingCallback = void Function(dynamic payload, {String? ref});

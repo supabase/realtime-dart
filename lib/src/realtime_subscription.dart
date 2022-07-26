@@ -87,7 +87,7 @@ class RealtimeSubscription {
   }
 
   void on(String event, BindingCallback callback) {
-    _bindings.add(Binding(event, callback));
+    _bindings.add(Binding(event: event, callback: callback));
   }
 
   void off(String event) {

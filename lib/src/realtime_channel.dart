@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:collection/collection.dart';
 import 'package:realtime_client/src/bind.dart';
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/push.dart';
@@ -57,9 +60,10 @@ class RealtimeChannel {
 
     on(
       ChannelEvents.reply.name,
+      {},
       (payload, {ref}) => trigger(
-        replyEventName(ref),
-        payload: payload,
+        replyEventName(ref!),
+        payload,
       ),
     );
 
@@ -104,22 +108,31 @@ class RealtimeChannel {
   }
 
   void onClose(Function callback) {
-    on(ChannelEvents.close.name, (reason, {ref}) => callback());
+    on(ChannelEvents.close.name, {}, (reason, {ref}) => callback());
   }
 
   void onError(void Function(String?) callback) {
-    on(
-      ChannelEvents.error.name,
-      (reason, {ref}) => callback(reason.toString()),
-    );
+    on(ChannelEvents.error.name, {},
+        (reason, {ref}) => callback(reason.toString()));
   }
 
-  void on(String event, BindingCallback callback) {
-    _bindings.add(Binding(event, callback));
+  void on(String type, Map<String, String>? filter, BindingCallback callback) {
+    _bindings.add(Binding(
+      type: type,
+      filter: filter ?? {},
+      callback: callback,
+    ));
   }
 
-  void off(String event) {
-    _bindings = _bindings.where((bind) => bind.event != event).toList();
+  void off(
+    String type,
+    Map<String, String> filter,
+  ) {
+    _bindings = _bindings.where((bind) {
+      return !(bind.type == type &&
+          bind.filter != null &&
+          _isEqual(bind.filter!, filter));
+    }).toList();
   }
 
   bool get canPush {
@@ -128,7 +141,7 @@ class RealtimeChannel {
 
   Push push(
     ChannelEvents event,
-    Map<String, String> payload, {
+    Map<String, dynamic> payload, {
     Duration? timeout,
   }) {
     if (!joinedOnce) {
@@ -159,16 +172,15 @@ class RealtimeChannel {
   /// channel.unsubscribe().receive("ok", (_){print("left!");} );
   /// ```
   Push unsubscribe({Duration? timeout}) {
+    _state = ChannelStates.leaving;
     void onClose() {
       socket.log('channel', 'leave $topic');
       trigger(
         ChannelEvents.close.name,
-        payload: {'type': 'leave'},
-        ref: joinRef,
+        'leave',
+        joinRef,
       );
     }
-
-    _state = ChannelStates.leaving;
 
     // Destroy joinPush to avoid connection timeouts during unscription phase
     _joinPush.destroy();
@@ -206,7 +218,7 @@ class RealtimeChannel {
     _joinPush.resend(timeout ?? _timeout);
   }
 
-  void trigger(String event, {dynamic payload, String? ref}) {
+  void trigger(String type, dynamic payload, [String? ref]) {
     final events = [
       ChannelEvents.close,
       ChannelEvents.error,
@@ -214,27 +226,32 @@ class RealtimeChannel {
       ChannelEvents.join,
     ].map((e) => e.name).toSet();
 
-    if (ref != null && events.contains(event) && ref != joinRef) return;
+    if (ref != null && events.contains(type) && ref != joinRef) return;
 
-    final handledPayload = onMessage(event, payload, ref: ref);
+    final handledPayload = onMessage(type, payload, ref: ref);
     if (payload != null && handledPayload == null) {
       throw 'channel onMessage callbacks must return the payload, modified or unmodified';
     }
 
     final filtered = _bindings.where((bind) {
-      /// bind all realtime events
-      if (bind.event == '*') {
-        return event == (payload is Map ? payload['type'] : payload);
-      } else {
-        return bind.event == event;
-      }
+      return (bind.type == type && bind.filter?['event'] == '*' ||
+          bind.filter?['event'] == payload['event']);
     });
     for (final bind in filtered) {
       bind.callback(handledPayload, ref: ref);
     }
   }
 
-  String replyEventName(String? ref) {
+  Future send(Map<String, dynamic> payload) {
+    final push = this.push(payload['type'], payload);
+
+    final completer = Completer<String>();
+    push.receive('ok', (_) => completer.complete('ok'));
+    push.receive('timeout', (_) => completer.complete('timeout'));
+    return completer.future;
+  }
+
+  String replyEventName(String ref) {
     return 'chan_reply_$ref';
   }
 
@@ -247,4 +264,8 @@ class RealtimeChannel {
   bool get isJoining => _state == ChannelStates.joining;
 
   bool get isLeaving => _state == ChannelStates.leaving;
+
+  static bool _isEqual(Map<String, String> map1, Map<String, String> map2) {
+    return MapEquality().equals(map1, map2);
+  }
 }
