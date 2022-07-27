@@ -5,6 +5,16 @@ class Presence {
   final Map<String, dynamic> payload;
 
   Presence({required this.presenceId, required this.payload});
+
+  Presence copyWith({
+    String? presenceId,
+    Map<String, dynamic>? payload,
+  }) {
+    return Presence(
+      presenceId: presenceId ?? this.presenceId,
+      payload: payload ?? this.payload,
+    );
+  }
 }
 
 class PresenceState {
@@ -176,8 +186,64 @@ class RealtimePresence {
     return currentState;
   }
 
+  /// Used to sync a diff of presence join and leave events from the
+  /// server, as they happen.
+  ///
+  /// Like `syncState`, `syncDiff` accepts optional `onJoin` and
+  /// `onLeave` callbacks to react to a user joining or leaving from a
+  /// device.
   static PresenceState syncDiff(
       PresenceState state, dynamic diff, dynamic onJoin, dynamic onLeave) {
+    final joins = _transformState(diff.joins);
+    final leaves = _transformState(diff.leaves);
+
+    if (!onJoin) {
+      onJoin = () => {};
+    }
+
+    if (!onLeave) {
+      onLeave = () => {};
+    }
+
+    _map(joins, (key, newPresences) {
+      final currentPresences = state.state[key];
+      state.state[key] =
+          newPresences.map((presence) => presence.copyWith()).toList();
+
+      if (currentPresences != null) {
+        final joinedPresenceIds =
+            state.state[key]!.map((m) => m.presenceId).toList();
+        final curPresences = currentPresences
+            .where((m) => joinedPresenceIds.contains(m.presenceId))
+            .toList();
+
+        // TODO coming back to this one
+        // state.state[key].unshift(...curPresences);
+      }
+
+      onJoin(key, currentPresences, newPresences);
+    });
+
+    _map(leaves, (key, leftPresences) {
+      var currentPresences = state.state[key];
+
+      if (currentPresences == null) return;
+
+      final presenceIdsToRemove =
+          leftPresences.map((m) => m.presenceId).toList();
+      currentPresences = currentPresences
+          .where((m) => presenceIdsToRemove.contains(m.presenceId))
+          .toList();
+
+      state.state[key] = currentPresences;
+
+      onLeave(key, currentPresences, leftPresences);
+
+      if (currentPresences.isEmpty) {
+        state.state.remove(key);
+      }
+    });
+
     return state;
   }
 
