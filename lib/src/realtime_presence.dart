@@ -67,7 +67,7 @@ class PresenceEvents {
   PresenceEvents({required this.state, required this.diff});
 }
 
-typedef PresenceChooser<T> = T Function(String key, List<Presence> presence);
+typedef PresenceChooser<T> = T Function(String key, dynamic presence);
 
 class RealtimePresence {
   PresenceState state = PresenceState({});
@@ -247,6 +247,39 @@ class RealtimePresence {
     return state;
   }
 
+  static List<T> _map<T>(PresenceState obj, PresenceChooser<T> func) {
+    return obj.keys.map((key) => func(key, obj.state[key]!)).toList();
+  }
+
+  /// Returns the array of presences, with selected metadata.
+  static List<T> _list<T>(
+      PresenceState presences, PresenceChooser<T>? chooser) {
+    if (chooser != null) {
+      chooser = (key, pres) => pres;
+    }
+
+    return _map(presences, (key, presences) => chooser!(key, presences));
+  }
+
+  /// Remove 'metas' key
+  /// Change 'phx_ref' to 'presence_id'
+  /// Remove 'phx_ref' and 'phx_ref_prev'
+  ///
+  /// @example
+  /// // returns {
+  ///  abc123: [
+  ///    { presence_id: '2', user_id: 1 },
+  ///    { presence_id: '3', user_id: 2 }
+  ///  ]
+  /// }
+  /// RealtimePresence.transformState({
+  ///  abc123: {
+  ///    metas: [
+  ///      { phx_ref: '2', phx_ref_prev: '1' user_id: 1 },
+  ///      { phx_ref: '3', user_id: 2 }
+  ///    ]
+  ///  }
+  /// })
   static PresenceState _transformState(dynamic state) {
     assert(state is PresenceState || state is RawPresenceState,
         'state must be a PresenceState or RawPresenceState');
@@ -271,8 +304,20 @@ class RealtimePresence {
     return PresenceState(newState);
   }
 
-  static List<T> _map<T>(PresenceState obj, PresenceChooser<T> func) {
-    return obj.keys.map((key) => func(key, obj.state[key]!)).toList();
+  void onJoin(PresenceOnJoinCallback callback) {
+    caller['onJoin'] = callback;
+  }
+
+  void onLeave(PresenceOnLeaveCallback callback) {
+    caller['onLeave'] = callback;
+  }
+
+  void onSync(void Function() callback) {
+    caller['onSync'] = callback;
+  }
+
+  List<T> list<T>([PresenceChooser<T>? by]) {
+    return RealtimePresence._list<T>(state, by);
   }
 
   bool inPendingSyncState() {
