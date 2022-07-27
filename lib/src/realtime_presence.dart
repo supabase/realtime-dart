@@ -11,6 +11,18 @@ class PresenceState {
   final Map<String, List<Presence>> state;
 
   PresenceState(this.state);
+
+  PresenceState copyWith({
+    Map<String, List<Presence>>? state,
+  }) {
+    return PresenceState(
+      state ?? this.state,
+    );
+  }
+
+  List<String> get keys {
+    return state.keys.toList();
+  }
 }
 
 class RawPresenceState {
@@ -44,6 +56,8 @@ class PresenceEvents {
 
   PresenceEvents({required this.state, required this.diff});
 }
+
+typedef PresenceChooser<T> = T Function(String key, dynamic presence);
 
 class RealtimePresence {
   PresenceState state = PresenceState({});
@@ -119,13 +133,53 @@ class RealtimePresence {
   /// disconnects and reconnects with the server.
   static PresenceState syncState(PresenceState currentState, dynamic newState,
       PresenceOnJoinCallback onJoin, PresenceOnLeaveCallback onLeave) {
-    // final state = c
+    final state = currentState.copyWith();
+    final transformedState = _transformState(state);
+    final PresenceState joins = PresenceState({});
+    final PresenceState leaves = PresenceState({});
+
+    _map(state, (String key, dynamic presence) {
+      if (!transformedState.state.containsKey(key)) {
+        leaves.state[key] = presence;
+      }
+    });
+
+    // TODO finish implementing syncState
+
     return currentState;
   }
 
   static PresenceState syncDiff(
       PresenceState state, dynamic diff, dynamic onJoin, dynamic onLeave) {
     return state;
+  }
+
+  static PresenceState _transformState(dynamic state) {
+    assert(state is PresenceState || state is RawPresenceState,
+        'state must be a PresenceState or RawPresenceState');
+
+    final Map<String, List<Presence>> newState = {};
+    for (final key in (state.state as Map<String, dynamic>).keys) {
+      final presences = state[key];
+
+      if ((presences.keys as List).contains('metas')) {
+        newState[key] = (presences['metas'] as List).map<Presence>((presence) {
+          final presenceId = presence['phx_ref'] as String;
+
+          presence.remove('phx_ref');
+          presence.remove('phx_ref_prev');
+
+          return Presence(presenceId: presenceId, payload: presence);
+        }).toList();
+      } else {
+        newState[key] = presences;
+      }
+    }
+    return PresenceState(newState);
+  }
+
+  static List<T> _map<T>(PresenceState obj, PresenceChooser<T> func) {
+    return obj.keys.map((key) => func(key, obj.state[key])).toList();
   }
 
   bool inPendingSyncState() {
