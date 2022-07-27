@@ -57,7 +57,7 @@ class PresenceEvents {
   PresenceEvents({required this.state, required this.diff});
 }
 
-typedef PresenceChooser<T> = T Function(String key, dynamic presence);
+typedef PresenceChooser<T> = T Function(String key, List<Presence> presence);
 
 class RealtimePresence {
   PresenceState state = PresenceState({});
@@ -138,13 +138,40 @@ class RealtimePresence {
     final PresenceState joins = PresenceState({});
     final PresenceState leaves = PresenceState({});
 
-    _map(state, (String key, dynamic presence) {
+    _map(state, (key, presence) {
       if (!transformedState.state.containsKey(key)) {
         leaves.state[key] = presence;
       }
     });
 
-    // TODO finish implementing syncState
+    _map(transformedState, (key, presence) {
+      final newPresences = presence;
+      final currentPresences = state.state[key];
+
+      if (currentPresences != null) {
+        final newPresenceIds = newPresences.map((m) => m.presenceId).toList();
+        final curPresenceIds =
+            currentPresences.map((m) => m.presenceId).toList();
+        final joinedPresences = newPresences
+            .where((m) => curPresenceIds.contains(m.presenceId))
+            .toList();
+        final leftPresences = currentPresences
+            .where((m) => newPresenceIds.contains(m.presenceId))
+            .toList();
+
+        if (joinedPresences.isNotEmpty) {
+          joins.state[key] = joinedPresences;
+        }
+
+        if (leftPresences.isNotEmpty) {
+          leaves.state[key] = leftPresences;
+        }
+      } else {
+        joins.state[key] = newPresences;
+      }
+
+      return syncDiff(state, {joins, leaves}, onJoin, onLeave);
+    });
 
     return currentState;
   }
@@ -179,7 +206,7 @@ class RealtimePresence {
   }
 
   static List<T> _map<T>(PresenceState obj, PresenceChooser<T> func) {
-    return obj.keys.map((key) => func(key, obj.state[key])).toList();
+    return obj.keys.map((key) => func(key, obj.state[key]!)).toList();
   }
 
   bool inPendingSyncState() {
