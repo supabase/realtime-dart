@@ -6,13 +6,10 @@ class Presence {
 
   Presence({required this.presenceId, required this.payload});
 
-  Presence copyWith({
-    String? presenceId,
-    Map<String, dynamic>? payload,
-  }) {
+  Presence deepClone() {
     return Presence(
-      presenceId: presenceId ?? this.presenceId,
-      payload: payload ?? this.payload,
+      presenceId: presenceId,
+      payload: payload,
     );
   }
 }
@@ -22,11 +19,9 @@ class PresenceState {
 
   PresenceState(this.state);
 
-  PresenceState copyWith({
-    Map<String, List<Presence>>? state,
-  }) {
+  PresenceState deepClone() {
     return PresenceState(
-      state ?? this.state,
+      state,
     );
   }
 
@@ -143,7 +138,7 @@ class RealtimePresence {
   /// disconnects and reconnects with the server.
   static PresenceState syncState(PresenceState currentState, dynamic newState,
       PresenceOnJoinCallback onJoin, PresenceOnLeaveCallback onLeave) {
-    final state = currentState.copyWith();
+    final state = currentState.deepClone();
     final transformedState = _transformState(state);
     final PresenceState joins = PresenceState({});
     final PresenceState leaves = PresenceState({});
@@ -192,23 +187,19 @@ class RealtimePresence {
   /// Like `syncState`, `syncDiff` accepts optional `onJoin` and
   /// `onLeave` callbacks to react to a user joining or leaving from a
   /// device.
-  static PresenceState syncDiff(
-      PresenceState state, dynamic diff, dynamic onJoin, dynamic onLeave) {
+  static PresenceState syncDiff(PresenceState state, dynamic diff,
+      PresenceOnJoinCallback? onJoin, PresenceOnLeaveCallback? onLeave) {
     final joins = _transformState(diff.joins);
     final leaves = _transformState(diff.leaves);
 
-    if (!onJoin) {
-      onJoin = () => {};
-    }
+    onJoin ??= (_, __, ___) => {};
 
-    if (!onLeave) {
-      onLeave = () => {};
-    }
+    onLeave ??= (_, __, ___) => {};
 
     _map(joins, (key, newPresences) {
       final currentPresences = state.state[key];
       state.state[key] =
-          newPresences.map((presence) => presence.copyWith()).toList();
+          newPresences.map((presence) => presence.deepClone()).toList();
 
       if (currentPresences != null) {
         final joinedPresenceIds =
@@ -221,7 +212,7 @@ class RealtimePresence {
         // state.state[key].unshift(...curPresences);
       }
 
-      onJoin(key, currentPresences, newPresences);
+      onJoin!(key, currentPresences, newPresences);
     });
 
     _map(leaves, (key, leftPresences) {
@@ -237,7 +228,7 @@ class RealtimePresence {
 
       state.state[key] = currentPresences;
 
-      onLeave(key, currentPresences, leftPresences);
+      onLeave!(key, currentPresences, leftPresences);
 
       if (currentPresences.isEmpty) {
         state.state.remove(key);
