@@ -17,7 +17,7 @@ void main() {
   group('constructor', () {
     setUp(() {
       socket = RealtimeClient('', timeout: const Duration(milliseconds: 1234));
-      channel = RealtimeSubscription('topic', socket, params: {'one': 'two'});
+      channel = RealtimeSubscription('topic', socket, {'one': 'two'});
     });
 
     test('sets defaults', () {

@@ -151,19 +151,14 @@ void main() {
 
     test('sets callbacks for connection', () async {
       int opens = 0;
-      socket.onOpen(() {
-        opens += 1;
-      });
+      socket.onOpen(() => opens += 1);
       int closes = 0;
-      socket.onClose((_) {
-        closes += 1;
-      });
+      socket.onClose((_) => closes += 1);
       late dynamic lastMsg;
-      socket.onMessage((m) {
-        lastMsg = m;
-      });
+      socket.onMessage((m) => lastMsg = m);
 
       socket.connect();
+
       expect(opens, 1);
 
       socket.sendHeartbeat();

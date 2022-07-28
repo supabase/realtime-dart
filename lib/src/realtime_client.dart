@@ -4,6 +4,7 @@ import 'dart:core';
 
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
+import 'package:realtime_client/src/realtime_channel.dart';
 import 'package:realtime_client/src/realtime_subscription.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 import 'package:realtime_client/src/websocket/websocket.dart';
@@ -26,7 +27,7 @@ typedef RealtimeDecode = void Function(
 
 class RealtimeClient {
   String? accessToken;
-  List<RealtimeSubscription> channels = [];
+  List<dynamic> channels = [];
   final String endPoint;
   final Map<String, String> headers;
   final Map<String, String> params;
@@ -199,32 +200,64 @@ class RealtimeClient {
     channels = channels.where((c) => c.joinRef != channel.joinRef).toList();
   }
 
-  RealtimeSubscription channel(
+  dynamic channel(
     String topic, {
     Map<String, dynamic> chanParams = const {},
   }) {
-    if (chanParams.isNotEmpty && chanParams['selfBroadcast'] != null) {
-      params['self_broadcast'] = chanParams['selfBroadcast']!.toString();
+    final selfBroadcast = chanParams['selfBroadcast'] as bool?;
+    chanParams.remove('selfBroadcast');
+    final params = chanParams;
+
+    if (selfBroadcast == true) {
+      params['self_broadcast'] = selfBroadcast;
     }
 
-    // Check for vsndate. If so, use a [RealtimeChannel] instead
-    final chan = RealtimeSubscription(topic, this, params: chanParams);
+    final chan = this.params['vsndate'] != null
+        ? RealtimeChannel(topic, this, params)
+        : RealtimeSubscription(topic, this, params);
+
+    if (chan is RealtimeChannel) {
+      chan.presence.onJoin((key, currentPresences, newPresences) {
+        chan.trigger('presence', {
+          'event': 'JOIN',
+          'key': key,
+          'currentPresences': currentPresences,
+          'newPresences': newPresences,
+        });
+      });
+
+      chan.presence.onLeave((key, currentPresences, leftPresences) {
+        chan.trigger('presence', {
+          'event': 'LEAVE',
+          'key': key,
+          'currentPresences': currentPresences,
+          'leftPresences': leftPresences,
+        });
+      });
+
+      chan.presence.onSync(() {
+        chan.trigger('presence', {'event': 'SYNC'});
+      });
+    }
+
     channels.add(chan);
     return chan;
   }
 
-  void push(Message message) {
+  /// Push out a message if the socket is connected.
+  ///
+  /// If the socket is not connected, the message gets enqueued within a local buffer, and sent out when a connection is next established.
+  void push(Message data) {
     void callback() {
-      encode(message.toJson(), (result) {
-        // print('send message $result');
+      encode(data.toJson(), (result) {
         conn?.sink.add(result);
       });
     }
 
     log(
       'push',
-      '${message.topic} ${message.event} (${message.ref})',
-      message.payload,
+      '${data.topic} ${data.event} (${data.ref})',
+      data.payload,
     );
 
     if (isConnected) {
@@ -234,31 +267,14 @@ class RealtimeClient {
     }
   }
 
-  /// Returns the URL of the websocket.
-  String get endPointURL {
-    final params = Map<String, String>.from(this.params);
-    params['vsn'] = Constants.vsn;
-    return _appendParams(endPoint, params);
-  }
-
-  /// Return the next message ref, accounting for overflows
-  String makeRef() {
-    final int newRef = ref + 1;
-    if (newRef < 0) {
-      ref = 0;
-    } else {
-      ref = newRef;
-    }
-    return ref.toString();
-  }
-
   void onConnMessage(String rawMessage) {
     decode(rawMessage, (msg) {
       final topic = msg['topic'] as String;
       final event = msg['event'] as String;
       final payload = msg['payload'];
       final ref = msg['ref'] as String?;
-      if (ref != null && ref == pendingHeartbeatRef) {
+      if ((ref != null && ref == pendingHeartbeatRef) ||
+          event == payload?.type) {
         pendingHeartbeatRef = null;
       }
 
@@ -281,29 +297,22 @@ class RealtimeClient {
     });
   }
 
-  void sendHeartbeat() {
-    if (!isConnected) return;
+  /// Returns the URL of the websocket.
+  String get endPointURL {
+    final params = Map<String, String>.from(this.params);
+    params['vsn'] = Constants.vsn;
+    return _appendParams(endPoint, params);
+  }
 
-    if (pendingHeartbeatRef != null) {
-      pendingHeartbeatRef = null;
-      log(
-        'transport',
-        'heartbeat timeout. Attempting to re-establish connection',
-      );
-      conn?.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
-      return;
+  /// Return the next message ref, accounting for overflows
+  String makeRef() {
+    final int newRef = ref + 1;
+    if (newRef < 0) {
+      ref = 0;
+    } else {
+      ref = newRef;
     }
-
-    pendingHeartbeatRef = makeRef();
-    push(
-      Message(
-        topic: 'phoenix',
-        event: ChannelEvents.heartbeat,
-        payload: {},
-        ref: pendingHeartbeatRef,
-      ),
-    );
-    setAuth(accessToken);
+    return ref.toString();
   }
 
   /// Sets the JWT access token used for channel subscription authorization and Realtime RLS.
@@ -402,5 +411,30 @@ class RealtimeClient {
       }
       sendBuffer = [];
     }
+  }
+
+  void sendHeartbeat() {
+    if (!isConnected) return;
+
+    if (pendingHeartbeatRef != null) {
+      pendingHeartbeatRef = null;
+      log(
+        'transport',
+        'heartbeat timeout. Attempting to re-establish connection',
+      );
+      conn?.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
+      return;
+    }
+
+    pendingHeartbeatRef = makeRef();
+    push(
+      Message(
+        topic: 'phoenix',
+        event: ChannelEvents.heartbeat,
+        payload: {},
+        ref: pendingHeartbeatRef,
+      ),
+    );
+    setAuth(accessToken);
   }
 }

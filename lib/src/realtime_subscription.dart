@@ -16,7 +16,7 @@ class RealtimeSubscription {
   late Push _joinPush;
   final Duration _timeout;
 
-  RealtimeSubscription(this.topic, this.socket, {this.params = const {}})
+  RealtimeSubscription(this.topic, this.socket, [this.params = const {}])
       : _timeout = socket.timeout {
     _joinPush = Push(this, ChannelEvents.join, params, _timeout);
     _rejoinTimer =

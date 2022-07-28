@@ -23,7 +23,7 @@ class RealtimeChannel {
   final Duration _timeout;
   late RealtimePresence presence;
 
-  RealtimeChannel(this.topic, this.socket, {this.params = const {}})
+  RealtimeChannel(this.topic, this.socket, [this.params = const {}])
       : _timeout = socket.timeout {
     _joinPush = Push(this, ChannelEvents.join, params, _timeout);
     _rejoinTimer =
