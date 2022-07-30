@@ -15,7 +15,8 @@ class Message {
 
   Map<String, dynamic> toJson() => {
         'topic': topic,
-        'event': event != ChannelEvents.heartbeat ? event.name : 'heartbeat',
+        'event':
+            event != ChannelEvents.heartbeat ? event.eventName() : 'heartbeat',
         'payload': payload,
         'ref': ref
       };

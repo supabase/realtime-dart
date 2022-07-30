@@ -202,8 +202,9 @@ class RealtimeClient {
 
   dynamic channel(
     String topic, {
-    Map<String, dynamic> chanParams = const {},
+    Map<String, dynamic>? chanParams,
   }) {
+    chanParams ??= {};
     final selfBroadcast = chanParams['selfBroadcast'] as bool?;
     chanParams.remove('selfBroadcast');
     final params = chanParams;
@@ -326,7 +327,7 @@ class RealtimeClient {
         channel.updateJoinPayload({'user_token': token});
       }
       if (channel.joinedOnce && channel.isJoined) {
-        channel.push(ChannelEvents.access_token, {'access_token': token ?? ''});
+        channel.push(ChannelEvents.accessToken, {'access_token': token ?? ''});
       }
     }
   }
@@ -389,7 +390,7 @@ class RealtimeClient {
 
   void _triggerChanError() {
     for (final channel in channels) {
-      channel.trigger(ChannelEvents.error.name);
+      channel.trigger(ChannelEvents.error.eventName());
     }
   }
 

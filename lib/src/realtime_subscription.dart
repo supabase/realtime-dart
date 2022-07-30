@@ -52,7 +52,7 @@ class RealtimeSubscription {
     });
 
     on(
-      ChannelEvents.reply.name,
+      ChannelEvents.reply.eventName(),
       (payload, {ref}) => trigger(
         replyEventName(ref),
         payload: payload,
@@ -76,12 +76,12 @@ class RealtimeSubscription {
   }
 
   void onClose(Function callback) {
-    on(ChannelEvents.close.name, (reason, {ref}) => callback());
+    on(ChannelEvents.close.eventName(), (reason, {ref}) => callback());
   }
 
   void onError(void Function(String?) callback) {
     on(
-      ChannelEvents.error.name,
+      ChannelEvents.error.eventName(),
       (reason, {ref}) => callback(reason.toString()),
     );
   }
@@ -104,7 +104,7 @@ class RealtimeSubscription {
     Duration? timeout,
   }) {
     if (!joinedOnce) {
-      throw "tried to push '${event.name}' to '$topic' before joining. Use channel.subscribe() before pushing events";
+      throw "tried to push '${event.eventName()}' to '$topic' before joining. Use channel.subscribe() before pushing events";
     }
     final pushEvent = Push(this, event, payload, timeout ?? _timeout);
     if (canPush) {
@@ -134,7 +134,7 @@ class RealtimeSubscription {
     void onClose() {
       socket.log('channel', 'leave $topic');
       trigger(
-        ChannelEvents.close.name,
+        ChannelEvents.close.eventName(),
         payload: {'type': 'leave'},
         ref: joinRef,
       );
@@ -184,7 +184,7 @@ class RealtimeSubscription {
       ChannelEvents.error,
       ChannelEvents.leave,
       ChannelEvents.join,
-    ].map((e) => e.name).toSet();
+    ].map((e) => e.eventName()).toSet();
 
     if (ref != null && events.contains(event) && ref != joinRef) return;
 

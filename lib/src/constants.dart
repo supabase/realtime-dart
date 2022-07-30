@@ -14,7 +14,16 @@ enum SocketStates { connecting, open, closing, closed, disconnected }
 enum ChannelStates { closed, errored, joined, joining, leaving }
 
 // ignore: constant_identifier_names
-enum ChannelEvents { close, error, join, reply, leave, heartbeat, access_token }
+enum ChannelEvents { close, error, join, reply, leave, heartbeat, accessToken }
+
+extension ChannelEventsName on ChannelEvents {
+  String eventName() {
+    if (this == ChannelEvents.accessToken) {
+      return 'access_token';
+    }
+    return 'phx_${toString().split('.').last}';
+  }
+}
 
 class Transports {
   static const String websocket = 'websocket';

@@ -208,8 +208,7 @@ class RealtimePresence {
             .where((m) => joinedPresenceIds.contains(m.presenceId))
             .toList();
 
-        // TODO coming back to this one
-        // state.state[key].unshift(...curPresences);
+        state.state[key]!.insertAll(0, curPresences);
       }
 
       onJoin!(key, currentPresences, newPresences);
