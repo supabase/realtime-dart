@@ -199,7 +199,7 @@ class RealtimePresence {
   /// `onLeave` callbacks to react to a user joining or leaving from a
   /// device.
   static PresenceState syncDiff(PresenceState state, dynamic diff,
-      PresenceOnJoinCallback? onJoin, PresenceOnLeaveCallback? onLeave) {
+      [PresenceOnJoinCallback? onJoin, PresenceOnLeaveCallback? onLeave]) {
     assert(diff is RawPresenceDiff || diff is PresenceDiff,
         'diff must be RawPresenceDiff or RawPresenceDiff');
     final joins = _transformState(diff.joins);
@@ -258,11 +258,9 @@ class RealtimePresence {
   }
 
   /// Returns the array of presences, with selected metadata.
-  static List<T> _list<T>(
-      PresenceState presences, PresenceChooser<T>? chooser) {
-    if (chooser != null) {
-      chooser = (key, pres) => pres;
-    }
+  static List<T> listAll<T>(PresenceState presences,
+      [PresenceChooser<T>? chooser]) {
+    chooser ??= (key, pres) => pres;
 
     return _map(presences, (key, presences) => chooser!(key, presences));
   }
@@ -325,7 +323,7 @@ class RealtimePresence {
   }
 
   List<T> list<T>([PresenceChooser<T>? by]) {
-    return RealtimePresence._list<T>(state, by);
+    return RealtimePresence.listAll<T>(state, by);
   }
 
   bool inPendingSyncState() {
