@@ -4,36 +4,45 @@ class Presence {
   final String presenceId;
   final Map<String, dynamic> payload;
 
-  Presence({required this.presenceId, required this.payload});
+  Presence(Map<String, dynamic> map)
+      : presenceId = map['presence_id'],
+        payload = map..remove('presence_id');
 
   Presence deepClone() {
-    return Presence(
-      presenceId: presenceId,
-      payload: payload,
-    );
+    return Presence({'presence_id': presenceId, ...payload});
   }
 }
 
 class PresenceState {
-  final Map<String, List<Presence>> state;
+  final Map<String, List<Presence>> presences;
 
-  PresenceState(this.state);
+  PresenceState(this.presences);
 
   PresenceState deepClone() {
     return PresenceState(
-      state,
+      presences,
     );
   }
 
   List<String> get keys {
-    return state.keys.toList();
+    return presences.keys.toList();
   }
 }
 
-class RawPresenceState {
-  final Map<String, List<dynamic>> state;
+class PresenceDiff {
+  final PresenceState joins;
+  final PresenceState leaves;
 
-  RawPresenceState(this.state);
+  PresenceDiff({
+    required this.joins,
+    required this.leaves,
+  });
+}
+
+class RawPresenceState {
+  final Map<String, Map<String, List<Map<String, dynamic>>>> presences;
+
+  RawPresenceState(this.presences);
 }
 
 class RawPresenceDiff {
@@ -136,49 +145,51 @@ class RealtimePresence {
   /// An optional `onJoin` and `onLeave` callback can be provided to
   /// react to changes in the client's local presences across
   /// disconnects and reconnects with the server.
-  static PresenceState syncState(PresenceState currentState, dynamic newState,
-      PresenceOnJoinCallback onJoin, PresenceOnLeaveCallback onLeave) {
+  static PresenceState syncState(
+    PresenceState currentState,
+    dynamic newState, [
+    PresenceOnJoinCallback? onJoin,
+    PresenceOnLeaveCallback? onLeave,
+  ]) {
     final state = currentState.deepClone();
-    final transformedState = _transformState(state);
+    final transformedState = _transformState(newState);
     final PresenceState joins = PresenceState({});
     final PresenceState leaves = PresenceState({});
 
     _map(state, (key, presence) {
-      if (!transformedState.state.containsKey(key)) {
-        leaves.state[key] = presence;
+      if (!transformedState.presences.containsKey(key)) {
+        leaves.presences[key] = presence;
       }
     });
 
-    _map(transformedState, (key, presence) {
-      final newPresences = presence;
-      final currentPresences = state.state[key];
+    _map(transformedState, (key, newPresences) {
+      final currentPresences = state.presences[key];
 
       if (currentPresences != null) {
         final newPresenceIds = newPresences.map((m) => m.presenceId).toList();
         final curPresenceIds =
             currentPresences.map((m) => m.presenceId).toList();
         final joinedPresences = newPresences
-            .where((m) => curPresenceIds.contains(m.presenceId))
+            .where((m) => !curPresenceIds.contains(m.presenceId))
             .toList();
         final leftPresences = currentPresences
-            .where((m) => newPresenceIds.contains(m.presenceId))
+            .where((m) => !newPresenceIds.contains(m.presenceId))
             .toList();
 
         if (joinedPresences.isNotEmpty) {
-          joins.state[key] = joinedPresences;
+          joins.presences[key] = joinedPresences;
         }
 
         if (leftPresences.isNotEmpty) {
-          leaves.state[key] = leftPresences;
+          leaves.presences[key] = leftPresences;
         }
       } else {
-        joins.state[key] = newPresences;
+        joins.presences[key] = newPresences;
       }
-
-      return syncDiff(state, {joins, leaves}, onJoin, onLeave);
     });
 
-    return currentState;
+    return syncDiff(
+        state, PresenceDiff(joins: joins, leaves: leaves), onJoin, onLeave);
   }
 
   /// Used to sync a diff of presence join and leave events from the
@@ -189,6 +200,8 @@ class RealtimePresence {
   /// device.
   static PresenceState syncDiff(PresenceState state, dynamic diff,
       PresenceOnJoinCallback? onJoin, PresenceOnLeaveCallback? onLeave) {
+    assert(diff is RawPresenceDiff || diff is PresenceDiff,
+        'diff must be RawPresenceDiff or RawPresenceDiff');
     final joins = _transformState(diff.joins);
     final leaves = _transformState(diff.leaves);
 
@@ -197,40 +210,43 @@ class RealtimePresence {
     onLeave ??= (_, __, ___) => {};
 
     _map(joins, (key, newPresences) {
-      final currentPresences = state.state[key];
-      state.state[key] =
-          newPresences.map((presence) => presence.deepClone()).toList();
+      final currentPresences = state.presences[key];
+      state.presences[key] = (newPresences as List).map((presence) {
+        return presence.deepClone() as Presence;
+      }).toList();
 
       if (currentPresences != null) {
         final joinedPresenceIds =
-            state.state[key]!.map((m) => m.presenceId).toList();
+            state.presences[key]!.map((m) => m.presenceId).toList();
         final curPresences = currentPresences
-            .where((m) => joinedPresenceIds.contains(m.presenceId))
+            .where((m) => !joinedPresenceIds.contains(m.presenceId))
             .toList();
 
-        state.state[key]!.insertAll(0, curPresences);
+        state.presences[key]!.insertAll(0, curPresences);
       }
 
       onJoin!(key, currentPresences, newPresences);
     });
 
     _map(leaves, (key, leftPresences) {
-      var currentPresences = state.state[key];
+      var currentPresences = state.presences[key];
 
       if (currentPresences == null) return;
 
       final presenceIdsToRemove =
-          leftPresences.map((m) => m.presenceId).toList();
+          leftPresences.map((leftPresence) => leftPresence.presenceId).toList();
+
       currentPresences = currentPresences
-          .where((m) => presenceIdsToRemove.contains(m.presenceId))
+          .where(
+              (presence) => !presenceIdsToRemove.contains(presence.presenceId))
           .toList();
 
-      state.state[key] = currentPresences;
+      state.presences[key] = currentPresences;
 
       onLeave!(key, currentPresences, leftPresences);
 
       if (currentPresences.isEmpty) {
-        state.state.remove(key);
+        state.presences.remove(key);
       }
     });
 
@@ -238,7 +254,7 @@ class RealtimePresence {
   }
 
   static List<T> _map<T>(PresenceState obj, PresenceChooser<T> func) {
-    return obj.keys.map((key) => func(key, obj.state[key]!)).toList();
+    return obj.keys.map((key) => func(key, obj.presences[key]!)).toList();
   }
 
   /// Returns the array of presences, with selected metadata.
@@ -274,24 +290,26 @@ class RealtimePresence {
     assert(state is PresenceState || state is RawPresenceState,
         'state must be a PresenceState or RawPresenceState');
 
-    final Map<String, List<Presence>> newState = {};
-    for (final key in (state.state as Map<String, dynamic>).keys) {
-      final presences = state[key];
+    final Map<String, List<Presence>> newStateMap = {};
 
-      if ((presences.keys as List).contains('metas')) {
-        newState[key] = (presences['metas'] as List).map<Presence>((presence) {
-          final presenceId = presence['phx_ref'] as String;
+    for (final key in (state.presences as Map<String, dynamic>).keys) {
+      final presences = state.presences[key]!;
+
+      if (state is RawPresenceState) {
+        newStateMap[key] =
+            (presences['metas'] as List).map<Presence>((presence) {
+          presence['presence_id'] = presence['phx_ref'] as String;
 
           presence.remove('phx_ref');
           presence.remove('phx_ref_prev');
 
-          return Presence(presenceId: presenceId, payload: presence);
+          return Presence(presence);
         }).toList();
       } else {
-        newState[key] = presences;
+        newStateMap[key] = presences;
       }
     }
-    return PresenceState(newState);
+    return PresenceState(newStateMap);
   }
 
   void onJoin(PresenceOnJoinCallback callback) {
