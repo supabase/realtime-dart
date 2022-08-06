@@ -4,7 +4,7 @@ import 'dart:core';
 
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
-import 'package:realtime_client/src/realtime_subscription.dart';
+import 'package:realtime_client/src/realtime_channel.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 import 'package:realtime_client/src/websocket/websocket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -26,7 +26,7 @@ typedef RealtimeDecode = void Function(
 
 class RealtimeClient {
   String? accessToken;
-  List<RealtimeSubscription> channels = [];
+  List<RealtimeChannel> channels = [];
   final String endPoint;
   final Map<String, String> headers;
   final Map<String, String> params;
@@ -195,11 +195,11 @@ class RealtimeClient {
   bool get isConnected => connectionState == 'open';
 
   /// Removes a subscription from the socket.
-  void remove(RealtimeSubscription channel) {
+  void remove(RealtimeChannel channel) {
     channels = channels.where((c) => c.joinRef != channel.joinRef).toList();
   }
 
-  RealtimeSubscription channel(
+  RealtimeChannel channel(
     String topic, {
     Map<String, dynamic> chanParams = const {},
   }) {
@@ -208,7 +208,7 @@ class RealtimeClient {
     }
 
     // Check for vsndate. If so, use a [RealtimeChannel] instead
-    final chan = RealtimeSubscription(topic, this, params: chanParams);
+    final chan = RealtimeChannel(topic, this, params: chanParams);
     channels.add(chan);
     return chan;
   }

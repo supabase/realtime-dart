@@ -8,17 +8,17 @@ class MockIOWebSocketChannel extends Mock implements IOWebSocketChannel {}
 
 class MockWebSocketSink extends Mock implements WebSocketSink {}
 
-class MockChannel extends Mock implements RealtimeSubscription {}
+class MockChannel extends Mock implements RealtimeChannel {}
 
 class MockPush extends Mock implements Push {}
 
 class SocketWithMockedChannel extends RealtimeClient {
   SocketWithMockedChannel(String endPoint) : super(endPoint);
 
-  Map<String, RealtimeSubscription> mockedChannelLooker = {};
+  Map<String, RealtimeChannel> mockedChannelLooker = {};
 
   @override
-  RealtimeSubscription channel(
+  RealtimeChannel channel(
     String topic, {
     Map<String, dynamic> chanParams = const {},
   }) {

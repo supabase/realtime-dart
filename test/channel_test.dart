@@ -3,12 +3,12 @@ import 'package:test/test.dart';
 
 void main() {
   late RealtimeClient socket;
-  late RealtimeSubscription channel;
+  late RealtimeChannel channel;
 
   const defaultRef = '1';
 
   test('channel should be initially closed', () {
-    final channel = RealtimeSubscription('topic', RealtimeClient('endpoint'));
+    final channel = RealtimeChannel('topic', RealtimeClient('endpoint'));
     expect(channel.isClosed, isTrue);
     channel.rejoin(const Duration(seconds: 5));
     expect(channel.isJoining, isTrue);
@@ -17,7 +17,7 @@ void main() {
   group('constructor', () {
     setUp(() {
       socket = RealtimeClient('', timeout: const Duration(milliseconds: 1234));
-      channel = RealtimeSubscription('topic', socket, params: {'one': 'two'});
+      channel = RealtimeChannel('topic', socket, params: {'one': 'two'});
     });
 
     test('sets defaults', () {
@@ -101,15 +101,16 @@ void main() {
   });
 
   group('on', () {
-    late RealtimeSubscription channel;
+    late RealtimeChannel channel;
 
     setUp(() {
-      channel = RealtimeSubscription('topic', RealtimeClient('endpoint'));
+      channel = RealtimeChannel('topic', RealtimeClient('endpoint'));
     });
 
     test('sets up callback for event', () {
       var callbackCalled = 0;
-      channel.on('event', (dynamic payload, {String? ref}) => callbackCalled++);
+      channel.on(
+          'event', {}, (dynamic payload, {String? ref}) => callbackCalled++);
 
       channel.trigger('event', payload: {});
       expect(callbackCalled, 1);
@@ -120,10 +121,12 @@ void main() {
       var otherEventCallbackCalled = 0;
       channel.on(
         'event',
+        {},
         (dynamic payload, {String? ref}) => eventCallbackCalled++,
       );
       channel.on(
         'otherEvent',
+        {},
         (dynamic payload, {String? ref}) => otherEventCallbackCalled++,
       );
 
@@ -134,7 +137,8 @@ void main() {
 
     test('"*" bind all events', () {
       var callbackCalled = 0;
-      channel.on('*', (dynamic payload, {String? ref}) => callbackCalled++);
+      channel.on('*', {'event': 'INSERT'},
+          (dynamic payload, {String? ref}) => callbackCalled++);
 
       channel.trigger('INSERT', payload: {});
       expect(callbackCalled, 0);
@@ -163,14 +167,17 @@ void main() {
 
       channel.on(
         'event',
+        {},
         (dynamic payload, {String? ref}) => callBackEventCalled1++,
       );
       channel.on(
         'event',
+        {},
         (dynamic payload, {String? ref}) => callbackEventCalled2++,
       );
       channel.on(
         'other',
+        {},
         (dynamic payload, {String? ref}) => callbackOtherCalled++,
       );
 
@@ -213,7 +220,7 @@ void main() {
     });
 
     test("able to unsubscribe from * subscription", () {
-      channel.on('*', (payload, {ref}) {});
+      channel.on('*', {}, (payload, {ref}) {});
       expect(socket.channels.length, 1);
 
       channel.unsubscribe().trigger('ok', {});

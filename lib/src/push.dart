@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
-import 'package:realtime_client/src/realtime_subscription.dart';
+import 'package:realtime_client/src/realtime_channel.dart';
 
 typedef Callback = void Function(dynamic response);
 
 /// Push event obj
 class Push {
-  final RealtimeSubscription _channel;
+  final RealtimeChannel _channel;
   final ChannelEvents _event;
   String? _ref;
   String? _refEvent;
@@ -80,7 +80,7 @@ class Push {
     _ref = _channel.socket.makeRef();
     _refEvent = _channel.replyEventName(ref);
 
-    _channel.on(_refEvent!, (dynamic payload, {ref}) {
+    _channel.on(_refEvent!, {}, (dynamic payload, {ref}) {
       cancelRefEvent();
       cancelTimeout();
       _receivedResp = payload;

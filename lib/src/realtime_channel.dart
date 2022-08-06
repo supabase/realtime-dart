@@ -7,12 +7,13 @@ typedef BindingCallback = void Function(dynamic payload, {String? ref});
 
 class Binding {
   String event;
+  Map<String, String> filter;
   BindingCallback callback;
 
-  Binding(this.event, this.callback);
+  Binding(this.event, this.filter, this.callback);
 }
 
-class RealtimeSubscription {
+class RealtimeChannel {
   ChannelStates _state = ChannelStates.closed;
   final String topic;
   final Map<String, dynamic> params;
@@ -24,7 +25,7 @@ class RealtimeSubscription {
   late Push _joinPush;
   final Duration _timeout;
 
-  RealtimeSubscription(this.topic, this.socket, {this.params = const {}})
+  RealtimeChannel(this.topic, this.socket, {this.params = const {}})
       : _timeout = socket.timeout {
     _joinPush = Push(this, ChannelEvents.join, params, _timeout);
     _rejoinTimer =
@@ -61,6 +62,7 @@ class RealtimeSubscription {
 
     on(
       ChannelEvents.reply.eventName(),
+      {},
       (payload, {ref}) => trigger(
         replyEventName(ref),
         payload: payload,
@@ -84,18 +86,28 @@ class RealtimeSubscription {
   }
 
   void onClose(Function callback) {
-    on(ChannelEvents.close.eventName(), (reason, {ref}) => callback());
+    on(ChannelEvents.close.eventName(), {}, (reason, {ref}) => callback());
   }
 
   void onError(void Function(String?) callback) {
     on(
       ChannelEvents.error.eventName(),
+      {},
       (reason, {ref}) => callback(reason.toString()),
     );
   }
 
-  void on(String event, BindingCallback callback) {
-    _bindings.add(Binding(event, callback));
+  RealtimeChannel on(
+    String type, [
+    Map<String, String>? filter,
+    BindingCallback? callback,
+  ]) {
+    _bindings.add(Binding(
+      type,
+      filter ?? <String, String>{},
+      callback ?? (_, {ref}) {},
+    ));
+    return this;
   }
 
   void off(String event) {

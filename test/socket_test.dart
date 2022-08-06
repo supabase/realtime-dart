@@ -298,7 +298,7 @@ void main() {
       const tTopic2 = 'topic-2';
 
       final mockedSocket = SocketWithMockedChannel(socketEndpoint);
-      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeSubscription>{
+      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeChannel>{
         tTopic1: mockedChannel1,
         tTopic2: mockedChannel2,
       });
@@ -463,7 +463,7 @@ void main() {
       const tTopic2 = 'topic-2';
 
       final mockedSocket = SocketWithMockedChannel(socketEndpoint);
-      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeSubscription>{
+      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeChannel>{
         tTopic1: mockedChannel1,
         tTopic2: mockedChannel2,
       });
