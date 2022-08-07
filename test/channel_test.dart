@@ -137,18 +137,12 @@ void main() {
 
     test('"*" bind all events', () {
       var callbackCalled = 0;
-      channel.on('*', {'event': 'INSERT'},
+      channel.on('realtime', {'event': '*'},
           (dynamic payload, [String? ref]) => callbackCalled++);
 
-      channel.trigger('INSERT', {});
-      expect(callbackCalled, 0);
-
-      channel.trigger('*', {'type': 'INSERT'});
-      expect(callbackCalled, 0);
-
-      channel.trigger('INSERT', {'type': 'INSERT'});
-      channel.trigger('UPDATE', {'type': 'UPDATE'});
-      channel.trigger('DELETE', {'type': 'DELETE'});
+      channel.trigger('realtime', {'event': 'INSERT'});
+      channel.trigger('realtime', {'event': 'UPDATE'});
+      channel.trigger('realtime', {'event': 'DELETE'});
       expect(callbackCalled, 3);
     });
   });
