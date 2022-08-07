@@ -1,6 +1,7 @@
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/push.dart';
 import 'package:realtime_client/src/realtime_client.dart';
+import 'package:realtime_client/src/realtime_presence.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 
 typedef BindingCallback = void Function(dynamic payload, {String? ref});
@@ -21,6 +22,8 @@ class RealtimeChannel {
   late Push _joinPush;
   late RetryTimer _rejoinTimer;
   List<Push> _pushBuffer = [];
+  late RealtimePresence presence;
+
   final String topic;
   final Map<String, dynamic> params;
   final RealtimeClient socket;
@@ -30,7 +33,7 @@ class RealtimeChannel {
     _joinPush = Push(this, ChannelEvents.join, params, _timeout);
     _rejoinTimer =
         RetryTimer(() => rejoinUntilConnected(), socket.reconnectAfterMs);
-    _joinPush.receive('ok', (response) {
+    _joinPush.receive('ok', (_) {
       _state = ChannelStates.joined;
       _rejoinTimer.reset();
       for (final pushEvent in _pushBuffer) {
@@ -53,7 +56,7 @@ class RealtimeChannel {
       _rejoinTimer.scheduleTimeout();
     });
 
-    _joinPush.receive('timeout', (response) {
+    _joinPush.receive('timeout', (_) {
       if (!isJoining) return;
       socket.log('channel', 'timeout $topic', _joinPush.timeout);
       _state = ChannelStates.errored;
@@ -68,6 +71,27 @@ class RealtimeChannel {
         payload: payload,
       ),
     );
+
+    presence = RealtimePresence(this);
+    presence.onJoin((key, currentPresences, newPresences) {
+      trigger('presence', payload: {
+        'event': 'join',
+        'key': key,
+        'currentPresences': currentPresences,
+        'newPresences': newPresences,
+      });
+    });
+    presence.onLeave((key, currentPresences, leftPresences) => {
+          trigger('presence', payload: {
+            'event': 'leave',
+            'key': key,
+            'currentPresences': currentPresences,
+            'leftPresences': leftPresences,
+          })
+        });
+    presence.onSync(() => {
+          trigger('presence', payload: {'event': 'sync'})
+        });
   }
 
   void rejoinUntilConnected() {
