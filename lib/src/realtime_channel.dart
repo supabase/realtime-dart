@@ -14,16 +14,16 @@ class Binding {
 }
 
 class RealtimeChannel {
+  List<Binding> _bindings = [];
+  final Duration _timeout;
   ChannelStates _state = ChannelStates.closed;
+  bool joinedOnce = false;
+  late Push _joinPush;
+  late RetryTimer _rejoinTimer;
+  List<Push> _pushBuffer = [];
   final String topic;
   final Map<String, dynamic> params;
   final RealtimeClient socket;
-  late RetryTimer _rejoinTimer;
-  List<Push> _pushBuffer = [];
-  List<Binding> _bindings = [];
-  bool joinedOnce = false;
-  late Push _joinPush;
-  final Duration _timeout;
 
   RealtimeChannel(this.topic, this.socket, {this.params = const {}})
       : _timeout = socket.timeout {
