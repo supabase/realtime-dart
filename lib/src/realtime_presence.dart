@@ -91,7 +91,7 @@ class RealtimePresence {
     final events = opts?.events ??
         PresenceEvents(state: 'presence_state', diff: 'presence_diff');
 
-    channel.on(events.state, {}, (newState, {ref}) {
+    channel.on(events.state, {}, (newState, [ref]) {
       final onJoin = caller['onJoin'];
       final onLeave = caller['onLeave'];
       final onSync = caller['onSync'];
@@ -119,7 +119,7 @@ class RealtimePresence {
       onSync();
     });
 
-    channel.on(events.diff, {}, (diff, {ref}) {
+    channel.on(events.diff, {}, (diff, [ref]) {
       final onJoin = caller['onJoin'];
       final onLeave = caller['onLeave'];
       final onSync = caller['onSync'];

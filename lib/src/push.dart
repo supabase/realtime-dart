@@ -10,9 +10,9 @@ typedef Callback = void Function(dynamic response);
 class Push {
   final RealtimeChannel _channel;
   final ChannelEvents _event;
-  String? _ref;
+  String _ref = '';
   String? _refEvent;
-  final Map<String, dynamic> payload;
+  late Map<String, dynamic> payload;
   dynamic _receivedResp;
   Duration _timeout;
   Timer? _timeoutTimer;
@@ -32,13 +32,13 @@ class Push {
     this._timeout = Constants.defaultTimeout,
   ]);
 
-  String? get ref => _ref;
+  String get ref => _ref;
 
   Duration get timeout => _timeout;
 
   void resend(Duration timeout) {
     _timeout = timeout;
-    cancelRefEvent();
+    _cancelRefEvent();
     _ref = '';
     _refEvent = null;
     _receivedResp = null;
@@ -62,7 +62,7 @@ class Push {
   }
 
   void updatePayload(Map<String, dynamic> payload) {
-    this.payload.addAll(payload);
+    this.payload = {...this.payload, ...payload};
   }
 
   Push receive(String status, Callback callback) {
@@ -80,8 +80,8 @@ class Push {
     _ref = _channel.socket.makeRef();
     _refEvent = _channel.replyEventName(ref);
 
-    _channel.on(_refEvent!, {}, (dynamic payload, {ref}) {
-      cancelRefEvent();
+    _channel.on(_refEvent!, {}, (dynamic payload, [ref]) {
+      _cancelRefEvent();
       cancelTimeout();
       _receivedResp = payload;
       matchReceive(payload['status'] as String, payload['response']);
@@ -96,7 +96,7 @@ class Push {
     if (_refEvent != null) {
       _channel.trigger(
         _refEvent!,
-        payload: {
+        {
           'status': status,
           'response': response,
         },
@@ -105,13 +105,13 @@ class Push {
   }
 
   void destroy() {
-    cancelRefEvent();
+    _cancelRefEvent();
     cancelTimeout();
   }
 
-  void cancelRefEvent() {
+  void _cancelRefEvent() {
     if (_refEvent == null) return;
-    _channel.off(_refEvent!);
+    _channel.off(_refEvent!, {});
   }
 
   void cancelTimeout() {

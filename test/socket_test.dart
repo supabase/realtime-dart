@@ -263,7 +263,7 @@ void main() {
     test('returns channel with given topic and params', () {
       final channel = socket.channel(
         tTopic,
-        chanParams: tParams,
+        tParams,
       );
 
       expect(channel.socket, socket);
@@ -276,7 +276,7 @@ void main() {
 
       final channel = socket.channel(
         tTopic,
-        chanParams: tParams,
+        tParams,
       );
 
       expect(socket.channels.length, 1);

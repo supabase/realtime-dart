@@ -4,14 +4,14 @@ import 'package:realtime_client/src/realtime_client.dart';
 import 'package:realtime_client/src/realtime_presence.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 
-typedef BindingCallback = void Function(dynamic payload, {String? ref});
+typedef BindingCallback = void Function(dynamic payload, [String? ref]);
 
 class Binding {
-  String event;
+  String type;
   Map<String, String> filter;
   BindingCallback callback;
 
-  Binding(this.event, this.filter, this.callback);
+  Binding(this.type, this.filter, this.callback);
 }
 
 class RealtimeChannel {
@@ -66,15 +66,15 @@ class RealtimeChannel {
     on(
       ChannelEvents.reply.eventName(),
       {},
-      (payload, {ref}) => trigger(
+      (payload, [ref]) => trigger(
         replyEventName(ref),
-        payload: payload,
+        payload,
       ),
     );
 
     presence = RealtimePresence(this);
     presence.onJoin((key, currentPresences, newPresences) {
-      trigger('presence', payload: {
+      trigger('presence', {
         'event': 'join',
         'key': key,
         'currentPresences': currentPresences,
@@ -82,7 +82,7 @@ class RealtimeChannel {
       });
     });
     presence.onLeave((key, currentPresences, leftPresences) => {
-          trigger('presence', payload: {
+          trigger('presence', {
             'event': 'leave',
             'key': key,
             'currentPresences': currentPresences,
@@ -90,7 +90,7 @@ class RealtimeChannel {
           })
         });
     presence.onSync(() => {
-          trigger('presence', payload: {'event': 'sync'})
+          trigger('presence', {'event': 'sync'})
         });
   }
 
@@ -103,21 +103,41 @@ class RealtimeChannel {
     if (joinedOnce == true) {
       throw "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance";
     } else {
+      final configs = _bindings.fold<Map<String, dynamic>>({}, (acc, binding) {
+        final type = binding.type;
+        if (![
+          'phx_close',
+          'phx_error',
+          'phx_reply',
+          'presence_diff',
+          'presence_state',
+        ].contains(type)) {
+          acc[type] = binding;
+        }
+        return acc;
+      });
+
+      if (configs.keys.isNotEmpty) {
+        updateJoinPayload(<String, dynamic>{'configs': configs});
+      }
+
       joinedOnce = true;
       rejoin(timeout ?? _timeout);
       return _joinPush;
     }
   }
 
+  /// Registers a callback that will be executed when the channel closes.
   void onClose(Function callback) {
-    on(ChannelEvents.close.eventName(), {}, (reason, {ref}) => callback());
+    on(ChannelEvents.close.eventName(), {}, (reason, [ref]) => callback());
   }
 
+  /// Registers a callback that will be executed when the channel encounteres an error.
   void onError(void Function(String?) callback) {
     on(
       ChannelEvents.error.eventName(),
       {},
-      (reason, {ref}) => callback(reason.toString()),
+      (reason, [ref]) => callback(reason.toString()),
     );
   }
 
@@ -129,24 +149,29 @@ class RealtimeChannel {
     _bindings.add(Binding(
       type,
       filter ?? <String, String>{},
-      callback ?? (_, {ref}) {},
+      callback ?? (_, [__]) {},
     ));
     return this;
   }
 
-  void off(String event) {
-    _bindings = _bindings.where((bind) => bind.event != event).toList();
+  RealtimeChannel off(String type, Map<String, String> filter) {
+    _bindings = _bindings.where((bind) {
+      return !(bind.type == type &&
+          RealtimeChannel._isEqual(bind.filter, filter));
+    }).toList();
+    return this;
   }
 
+  /// Returns `true` if the socket is connected and the channel has been joined.
   bool get canPush {
     return socket.isConnected && isJoined;
   }
 
   Push push(
     ChannelEvents event,
-    Map<String, String> payload, {
+    Map<String, String> payload, [
     Duration? timeout,
-  }) {
+  ]) {
     if (!joinedOnce) {
       throw "tried to push '${event.eventName()}' to '$topic' before joining. Use channel.subscribe() before pushing events";
     }
@@ -174,17 +199,12 @@ class RealtimeChannel {
   /// ```dart
   /// channel.unsubscribe().receive("ok", (_){print("left!");} );
   /// ```
-  Push unsubscribe({Duration? timeout}) {
+  Push unsubscribe([Duration? timeout]) {
+    _state = ChannelStates.leaving;
     void onClose() {
       socket.log('channel', 'leave $topic');
-      trigger(
-        ChannelEvents.close.eventName(),
-        payload: {'type': 'leave'},
-        ref: joinRef,
-      );
+      trigger(ChannelEvents.close.eventName(), {'type': 'leave'}, joinRef);
     }
-
-    _state = ChannelStates.leaving;
 
     // Destroy joinPush to avoid connection timeouts during unscription phase
     _joinPush.destroy();
@@ -205,7 +225,7 @@ class RealtimeChannel {
   ///
   /// Receives all events for specialized message handling before dispatching to the channel callbacks.
   /// Must return the payload, modified or unmodified.
-  dynamic onMessage(String event, dynamic payload, {String? ref}) {
+  dynamic onMessage(String event, dynamic payload, [String? ref]) {
     return payload;
   }
 
@@ -213,7 +233,7 @@ class RealtimeChannel {
     return this.topic == topic;
   }
 
-  String? get joinRef => _joinPush.ref;
+  String get joinRef => _joinPush.ref;
 
   void rejoin([Duration? timeout]) {
     if (isLeaving) return;
@@ -222,7 +242,7 @@ class RealtimeChannel {
     _joinPush.resend(timeout ?? _timeout);
   }
 
-  void trigger(String event, {dynamic payload, String? ref}) {
+  void trigger(String type, [dynamic payload, String? ref]) {
     final events = [
       ChannelEvents.close,
       ChannelEvents.error,
@@ -230,23 +250,20 @@ class RealtimeChannel {
       ChannelEvents.join,
     ].map((e) => e.eventName()).toSet();
 
-    if (ref != null && events.contains(event) && ref != joinRef) return;
+    if (ref != null && events.contains(type) && ref != joinRef) return;
 
-    final handledPayload = onMessage(event, payload, ref: ref);
+    final handledPayload = onMessage(type, payload, ref);
     if (payload != null && handledPayload == null) {
       throw 'channel onMessage callbacks must return the payload, modified or unmodified';
     }
 
     final filtered = _bindings.where((bind) {
-      /// bind all realtime events
-      if (bind.event == '*') {
-        return event == (payload is Map ? payload['type'] : payload);
-      } else {
-        return bind.event == event;
-      }
+      return bind.type == type &&
+          (bind.filter['event'] == '*' ||
+              bind.filter['event'] == payload?['event']);
     });
     for (final bind in filtered) {
-      bind.callback(handledPayload, ref: ref);
+      bind.callback(handledPayload, ref);
     }
   }
 
@@ -263,4 +280,18 @@ class RealtimeChannel {
   bool get isJoining => _state == ChannelStates.joining;
 
   bool get isLeaving => _state == ChannelStates.leaving;
+
+  static _isEqual(Map<String, String> obj1, Map<String, String> obj2) {
+    if (obj1.keys.length != obj2.keys.length) {
+      return false;
+    }
+
+    for (final k in obj1.keys) {
+      if (obj1[k] != obj2[k]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 }

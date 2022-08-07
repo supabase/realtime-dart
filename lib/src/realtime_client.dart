@@ -200,9 +200,9 @@ class RealtimeClient {
   }
 
   RealtimeChannel channel(
-    String topic, {
+    String topic, [
     Map<String, dynamic> chanParams = const {},
-  }) {
+  ]) {
     if (chanParams.isNotEmpty && chanParams['selfBroadcast'] != null) {
       params['self_broadcast'] = chanParams['selfBroadcast']!.toString();
     }
@@ -271,8 +271,8 @@ class RealtimeClient {
       channels.where((channel) => channel.isMember(topic)).forEach(
             (channel) => channel.trigger(
               event,
-              payload: payload,
-              ref: ref,
+              payload,
+              ref,
             ),
           );
       for (final callback in stateChangeCallbacks['message']!) {

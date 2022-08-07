@@ -31,7 +31,7 @@ void main() {
   group('join', () {
     setUp(() {
       socket = RealtimeClient('wss://example.com/socket');
-      channel = socket.channel('topic', chanParams: {'one': 'two'});
+      channel = socket.channel('topic', {'one': 'two'});
     });
 
     test('sets state to joining', () {
@@ -57,7 +57,7 @@ void main() {
   group('onError', () {
     setUp(() {
       socket = RealtimeClient('/socket');
-      channel = socket.channel('topic', chanParams: {'one': 'two'});
+      channel = socket.channel('topic', {'one': 'two'});
       channel.subscribe();
     });
 
@@ -73,7 +73,7 @@ void main() {
   group('onClose', () {
     setUp(() {
       socket = RealtimeClient('/socket');
-      channel = socket.channel('topic', chanParams: {'one': 'two'});
+      channel = socket.channel('topic', {'one': 'two'});
       channel.subscribe();
     });
 
@@ -90,7 +90,7 @@ void main() {
     setUp(() {
       socket = RealtimeClient('/socket');
 
-      channel = socket.channel('topic', chanParams: {'one': 'two'});
+      channel = socket.channel('topic', {'one': 'two'});
     });
 
     test('returns payload by default', () {
@@ -110,9 +110,9 @@ void main() {
     test('sets up callback for event', () {
       var callbackCalled = 0;
       channel.on(
-          'event', {}, (dynamic payload, {String? ref}) => callbackCalled++);
+          'event', {}, (dynamic payload, [String? ref]) => callbackCalled++);
 
-      channel.trigger('event', payload: {});
+      channel.trigger('event', {});
       expect(callbackCalled, 1);
     });
 
@@ -122,15 +122,15 @@ void main() {
       channel.on(
         'event',
         {},
-        (dynamic payload, {String? ref}) => eventCallbackCalled++,
+        (dynamic payload, [String? ref]) => eventCallbackCalled++,
       );
       channel.on(
         'otherEvent',
         {},
-        (dynamic payload, {String? ref}) => otherEventCallbackCalled++,
+        (dynamic payload, [String? ref]) => otherEventCallbackCalled++,
       );
 
-      channel.trigger('event', payload: {});
+      channel.trigger('event', {});
       expect(eventCallbackCalled, 1);
       expect(otherEventCallbackCalled, 0);
     });
@@ -138,17 +138,17 @@ void main() {
     test('"*" bind all events', () {
       var callbackCalled = 0;
       channel.on('*', {'event': 'INSERT'},
-          (dynamic payload, {String? ref}) => callbackCalled++);
+          (dynamic payload, [String? ref]) => callbackCalled++);
 
-      channel.trigger('INSERT', payload: {});
+      channel.trigger('INSERT', {});
       expect(callbackCalled, 0);
 
-      channel.trigger('*', payload: {'type': 'INSERT'});
+      channel.trigger('*', {'type': 'INSERT'});
       expect(callbackCalled, 0);
 
-      channel.trigger('INSERT', payload: {'type': 'INSERT'});
-      channel.trigger('UPDATE', payload: {'type': 'UPDATE'});
-      channel.trigger('DELETE', payload: {'type': 'DELETE'});
+      channel.trigger('INSERT', {'type': 'INSERT'});
+      channel.trigger('UPDATE', {'type': 'UPDATE'});
+      channel.trigger('DELETE', {'type': 'DELETE'});
       expect(callbackCalled, 3);
     });
   });
@@ -157,7 +157,7 @@ void main() {
     setUp(() {
       socket = RealtimeClient('/socket');
 
-      channel = socket.channel('topic', chanParams: {'one': 'two'});
+      channel = socket.channel('topic', {'one': 'two'});
     });
 
     test('removes all callbacks for event', () {
@@ -168,23 +168,23 @@ void main() {
       channel.on(
         'event',
         {},
-        (dynamic payload, {String? ref}) => callBackEventCalled1++,
+        (dynamic payload, [String? ref]) => callBackEventCalled1++,
       );
       channel.on(
         'event',
         {},
-        (dynamic payload, {String? ref}) => callbackEventCalled2++,
+        (dynamic payload, [String? ref]) => callbackEventCalled2++,
       );
       channel.on(
         'other',
         {},
-        (dynamic payload, {String? ref}) => callbackOtherCalled++,
+        (dynamic payload, [String? ref]) => callbackOtherCalled++,
       );
 
-      channel.off('event');
+      channel.off('event', {});
 
-      channel.trigger('event', payload: {}, ref: defaultRef);
-      channel.trigger('other', payload: {}, ref: defaultRef);
+      channel.trigger('event', {}, defaultRef);
+      channel.trigger('other', {}, defaultRef);
 
       expect(callBackEventCalled1, 0);
       expect(callbackEventCalled2, 0);
@@ -196,13 +196,12 @@ void main() {
     setUp(() {
       socket = RealtimeClient('/socket');
 
-      channel = socket.channel('topic', chanParams: {'one': 'two'});
+      channel = socket.channel('topic', {'one': 'two'});
       channel.subscribe().trigger('ok', {});
     });
 
     test("closes channel on 'ok' from server", () {
-      final anotherChannel =
-          socket.channel('another', chanParams: {'three': 'four'});
+      final anotherChannel = socket.channel('another', {'three': 'four'});
       expect(socket.channels.length, 2);
 
       channel.unsubscribe().trigger('ok', {});
@@ -220,7 +219,7 @@ void main() {
     });
 
     test("able to unsubscribe from * subscription", () {
-      channel.on('*', {}, (payload, {ref}) {});
+      channel.on('*', {}, (payload, [ref]) {});
       expect(socket.channels.length, 1);
 
       channel.unsubscribe().trigger('ok', {});
