@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:realtime_client/realtime_client.dart';
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/push.dart';
-import 'package:realtime_client/src/realtime_client.dart';
 import 'package:realtime_client/src/realtime_presence.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 
@@ -10,12 +13,32 @@ class Binding {
   String type;
   Map<String, String> filter;
   BindingCallback callback;
+  String? id;
 
-  Binding(this.type, this.filter, this.callback);
+  Binding(
+    this.type,
+    this.filter,
+    this.callback, [
+    this.id,
+  ]);
+
+  Binding copyWith({
+    String? type,
+    Map<String, String>? filter,
+    BindingCallback? callback,
+    String? id,
+  }) {
+    return Binding(
+      type ?? this.type,
+      filter ?? this.filter,
+      callback ?? this.callback,
+      id ?? this.id,
+    );
+  }
 }
 
 class RealtimeChannel {
-  List<Binding> _bindings = [];
+  final Map<String, List<Binding>> _bindings = {};
   final Duration _timeout;
   ChannelStates _state = ChannelStates.closed;
   bool joinedOnce = false;
@@ -25,12 +48,24 @@ class RealtimeChannel {
   late RealtimePresence presence;
 
   final String topic;
-  final Map<String, dynamic> params;
+  Map<String, dynamic> params;
   final RealtimeClient socket;
 
   RealtimeChannel(this.topic, this.socket, {this.params = const {}})
       : _timeout = socket.timeout {
-    _joinPush = Push(this, ChannelEvents.join, params, _timeout);
+    params['configs'] = {
+      ...{
+        'broadcast': {'ack': false, 'self': false},
+        'presence': {'key': ''},
+      },
+      ...(params['configs'] ?? {}),
+    };
+    _joinPush = Push(
+      this,
+      ChannelEvents.join,
+      params,
+      _timeout,
+    );
     _rejoinTimer =
         RetryTimer(() => rejoinUntilConnected(), socket.reconnectAfterMs);
     _joinPush.receive('ok', (_) {
@@ -50,14 +85,18 @@ class RealtimeChannel {
     });
 
     onError((String? reason) {
-      if (isLeaving || isClosed) return;
+      if (isLeaving || isClosed) {
+        return;
+      }
       socket.log('channel', 'error $topic', reason);
       _state = ChannelStates.errored;
       _rejoinTimer.scheduleTimeout();
     });
 
     _joinPush.receive('timeout', (_) {
-      if (!isJoining) return;
+      if (!isJoining) {
+        return;
+      }
       socket.log('channel', 'timeout $topic', _joinPush.timeout);
       _state = ChannelStates.errored;
       _rejoinTimer.scheduleTimeout();
@@ -66,65 +105,132 @@ class RealtimeChannel {
     on(
       ChannelEvents.reply.eventName(),
       {},
-      (payload, [ref]) => trigger(
-        replyEventName(ref),
-        payload,
-      ),
+      (payload, [ref]) {
+        trigger(replyEventName(ref), payload);
+      },
     );
 
     presence = RealtimePresence(this);
-    presence.onJoin((key, currentPresences, newPresences) {
-      trigger('presence', {
-        'event': 'join',
-        'key': key,
-        'currentPresences': currentPresences,
-        'newPresences': newPresences,
-      });
-    });
-    presence.onLeave((key, currentPresences, leftPresences) => {
-          trigger('presence', {
-            'event': 'leave',
-            'key': key,
-            'currentPresences': currentPresences,
-            'leftPresences': leftPresences,
-          })
-        });
-    presence.onSync(() => {
-          trigger('presence', {'event': 'sync'})
-        });
   }
 
   void rejoinUntilConnected() {
     _rejoinTimer.scheduleTimeout();
-    if (socket.isConnected) rejoin();
+    if (socket.isConnected) {
+      rejoin();
+    }
   }
 
-  Push subscribe({Duration? timeout}) {
+  void subscribe([Function? callback, Duration? timeout]) {
     if (joinedOnce == true) {
       throw "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance";
     } else {
-      final configs = _bindings.fold<Map<String, dynamic>>({}, (acc, binding) {
-        final type = binding.type;
-        if (![
-          'phx_close',
-          'phx_error',
-          'phx_reply',
-          'presence_diff',
-          'presence_state',
-        ].contains(type)) {
-          acc[type] = binding;
-        }
-        return acc;
+      final broadcast = params['configs']['broadcast'];
+      final presence = params['configs']['presence'];
+
+      onError((e) {
+        if (callback != null) callback('CHANNEL_ERROR', e);
+      });
+      onClose(() {
+        if (callback != null) callback('CLOSED');
       });
 
-      if (configs.keys.isNotEmpty) {
-        updateJoinPayload(<String, dynamic>{'configs': configs});
+      final accessTokenPayload = <String, String>{};
+      final configs = <String, dynamic>{
+        'broadcast': broadcast,
+        'presence': presence,
+        'postgres_changes':
+            _bindings['postgres_changes']?.map((r) => r.filter).toList() ?? [],
+      };
+
+      if (socket.accessToken != null) {
+        accessTokenPayload['access_token'] = socket.accessToken!;
       }
+
+      updateJoinPayload({'configs': configs, ...accessTokenPayload});
 
       joinedOnce = true;
       rejoin(timeout ?? _timeout);
-      return _joinPush;
+
+      _joinPush.receive('ok', (response) {
+        final serverPostgresFilters = response['postgres_changes'];
+        if (socket.accessToken != null) socket.setAuth(socket.accessToken);
+
+        final clientPostgresBindings = _bindings['postgres_changes'];
+        final bindingsLen = clientPostgresBindings?.length ?? 0;
+        final newPostgresBindings = <Binding>[];
+
+        for (var i = 0; i < bindingsLen; i++) {
+          final clientPostgresBinding = clientPostgresBindings![i];
+
+          final event = clientPostgresBinding.filter['event'];
+          final schema = clientPostgresBinding.filter['schema'];
+          final table = clientPostgresBinding.filter['table'];
+          final filter = clientPostgresBinding.filter['filter'];
+          final serverPostgresFilter = serverPostgresFilters[i];
+
+          if (serverPostgresFilter &&
+              serverPostgresFilter['event'] == event &&
+              serverPostgresFilter['schema'] == schema &&
+              serverPostgresFilter['table'] == table &&
+              serverPostgresFilter['filter'] == filter) {
+            newPostgresBindings.add(
+                clientPostgresBinding.copyWith(id: serverPostgresFilter.id));
+          } else {
+            unsubscribe();
+            if (callback != null) {
+              callback(
+                  'CHANNEL_ERROR',
+                  Exception(
+                      'mismatch between server and client bindings for postgres changes'));
+            }
+            return;
+          }
+        }
+
+        _bindings['postgres_changes'] = newPostgresBindings;
+
+        if (callback != null) callback('SUBSCRIBED');
+        return;
+      }).receive('error', (response) {
+        if (callback != null) {
+          callback(
+              'CHANNEL_ERROR',
+              Exception(jsonEncode((response as Map<String, dynamic>).isNotEmpty
+                  ? (response).values.join(', ')
+                  : 'error')));
+        }
+        return;
+      }).receive('timeout', (response) {
+        if (callback != null) callback('TIMED OUT');
+        return;
+      });
     }
+  }
+
+  PresenceState presenceState() {
+    return presence.state;
+  }
+
+  Future<String> track(Map<String, dynamic> payload,
+      [Map<String, dynamic> opts = const {}]) {
+    return send(
+      {
+        'type': 'presence',
+        'event': 'track',
+        'payload': payload,
+      },
+      opts['timeout'] ?? _timeout,
+    );
+  }
+
+  Future<String> untrack([Map<String, dynamic> opts = const {}]) {
+    return send(
+      {
+        'type': 'presence',
+        'event': 'untrack',
+      },
+      opts,
+    );
   }
 
   /// Registers a callback that will be executed when the channel closes.
@@ -134,29 +240,30 @@ class RealtimeChannel {
 
   /// Registers a callback that will be executed when the channel encounteres an error.
   void onError(void Function(String?) callback) {
-    on(
-      ChannelEvents.error.eventName(),
-      {},
-      (reason, [ref]) => callback(reason.toString()),
-    );
+    on(ChannelEvents.error.eventName(), {},
+        (reason, [ref]) => callback(reason.toString()));
   }
 
   RealtimeChannel on(
-    String type, [
-    Map<String, String>? filter,
-    BindingCallback? callback,
-  ]) {
-    _bindings.add(Binding(
-      type,
-      filter ?? <String, String>{},
-      callback ?? (_, [__]) {},
-    ));
+      String type, Map<String, String> filter, BindingCallback callback) {
+    final typeLower = type.toLowerCase();
+
+    final binding = Binding(typeLower, filter, callback);
+
+    if (_bindings[typeLower] != null) {
+      _bindings[typeLower]!.add(binding);
+    } else {
+      _bindings[typeLower] = [binding];
+    }
+
     return this;
   }
 
   RealtimeChannel off(String type, Map<String, String> filter) {
-    _bindings = _bindings.where((bind) {
-      return !(bind.type == type &&
+    final typeLower = type.toLowerCase();
+
+    _bindings[typeLower] = _bindings[typeLower]!.where((bind) {
+      return !(bind.type.toLowerCase() == typeLower &&
           RealtimeChannel._isEqual(bind.filter, filter));
     }).toList();
     return this;
@@ -169,7 +276,7 @@ class RealtimeChannel {
 
   Push push(
     ChannelEvents event,
-    Map<String, String> payload, [
+    Map<String, dynamic> payload, [
     Duration? timeout,
   ]) {
     if (!joinedOnce) {
@@ -186,6 +293,30 @@ class RealtimeChannel {
     return pushEvent;
   }
 
+  /// Returns 'ok', 'timed out' or 'rate limited'
+  Future<String> send(Map<String, dynamic> payload,
+      [Map<String, dynamic> opts = const {}]) {
+    assert(payload['type'] != null, '`type` must be present in the `payload`');
+    final completer = Completer<String>();
+
+    final Push push = this.push(ChannelEvents.fromName(payload['type']),
+        payload, opts['timeout'] ?? _timeout);
+
+    if (push.rateLimited != null) {
+      completer.complete('rate limited');
+    }
+
+    if (payload['type'] == 'broadcast' &&
+        !params['configs']?['broadcast']?['ack']) {
+      completer.complete('ok');
+    }
+
+    push.receive('ok', (_) => completer.complete('ok'));
+    push.receive('timeout', (_) => completer.complete('timed out'));
+
+    return completer.future;
+  }
+
   void updateJoinPayload(Map<String, dynamic> payload) {
     _joinPush.updatePayload(payload);
   }
@@ -199,26 +330,38 @@ class RealtimeChannel {
   /// ```dart
   /// channel.unsubscribe().receive("ok", (_){print("left!");} );
   /// ```
-  Push unsubscribe([Duration? timeout]) {
+  Future<String> unsubscribe([Duration? timeout]) {
     _state = ChannelStates.leaving;
     void onClose() {
       socket.log('channel', 'leave $topic');
-      trigger(ChannelEvents.close.eventName(), {'type': 'leave'}, joinRef);
+      trigger(ChannelEvents.close.eventName(), 'leave', joinRef);
     }
 
     // Destroy joinPush to avoid connection timeouts during unscription phase
     _joinPush.destroy();
 
+    final completer = Completer<String>();
+
     final leavePush = Push(this, ChannelEvents.leave, {}, timeout ?? _timeout);
-    leavePush
-        .receive('ok', (_) => onClose())
-        .receive('timeout', (_) => onClose());
+
+    leavePush.receive('ok', (_) {
+      onClose();
+      completer.complete('ok');
+    }).receive('timeout', (_) {
+      onClose();
+      completer.complete('timed out');
+    }).receive('error', (_) {
+      onClose();
+      completer.complete('error');
+    });
+
     leavePush.send();
+
     if (!canPush) {
       leavePush.trigger('ok', {});
     }
 
-    return leavePush;
+    return completer.future;
   }
 
   /// Overridable message hook
@@ -236,13 +379,17 @@ class RealtimeChannel {
   String get joinRef => _joinPush.ref;
 
   void rejoin([Duration? timeout]) {
-    if (isLeaving) return;
+    if (isLeaving) {
+      return;
+    }
     socket.leaveOpenTopic(topic);
     _state = ChannelStates.joining;
     _joinPush.resend(timeout ?? _timeout);
   }
 
   void trigger(String type, [dynamic payload, String? ref]) {
+    final typeLower = type.toLowerCase();
+
     final events = [
       ChannelEvents.close,
       ChannelEvents.error,
@@ -250,21 +397,58 @@ class RealtimeChannel {
       ChannelEvents.join,
     ].map((e) => e.eventName()).toSet();
 
-    if (ref != null && events.contains(type) && ref != joinRef) return;
+    if (ref != null && events.contains(typeLower) && ref != joinRef) {
+      return;
+    }
 
-    final handledPayload = onMessage(type, payload, ref);
+    var handledPayload = onMessage(typeLower, payload, ref);
     if (payload != null && handledPayload == null) {
       throw 'channel onMessage callbacks must return the payload, modified or unmodified';
     }
 
-    final filtered = _bindings.where((bind) {
-      return bind.type == type &&
-          (bind.filter['event'] == '*' ||
-              bind.filter['event'] == payload?['event']);
-    });
-    for (final bind in filtered) {
+    _bindings[typeLower]?.where((bind) {
+      if (['broadcast', 'presence', 'postgres_changes'].contains(typeLower)) {
+        if (bind.id != null) {
+          final bindId = bind.id;
+          final bindEvent = bind.filter['event'];
+
+          return (bindId != null &&
+              payload['ids']?.contains(bindId) &&
+              (bindEvent == '*' ||
+                  bindEvent?.toLowerCase() ==
+                      payload['data']?['type'].toLowerCase()));
+        } else {
+          final bindEvent = bind.filter['event']?.toLowerCase();
+          return (bindEvent == '*' ||
+              bindEvent == payload?.event?.toLocaleLowerCase());
+        }
+      } else {
+        return bind.type.toLowerCase() == typeLower;
+      }
+    }).map((bind) {
+      if (handledPayload is Map && handledPayload.keys.contains('ids')) {
+        final postgresChanges = handledPayload['data'];
+        final schema = postgresChanges['schema'];
+        final table = postgresChanges['table'];
+        final commitTimestamp = postgresChanges['commit_timestamp'];
+        final type = postgresChanges['type'];
+        final errors = postgresChanges['errors'];
+        final enrichedPayload = {
+          'schema': schema,
+          'table': table,
+          'commit_timestamp': commitTimestamp,
+          'eventType': type,
+          'new': {},
+          'old': {},
+          'errors': errors,
+        };
+        handledPayload = {
+          ...enrichedPayload,
+          ..._getPayloadRecords(postgresChanges),
+        };
+      }
       bind.callback(handledPayload, ref);
-    }
+    });
   }
 
   String replyEventName(String? ref) {
@@ -293,5 +477,23 @@ class RealtimeChannel {
     }
 
     return true;
+  }
+
+  Map<String, Map<String, dynamic>> _getPayloadRecords(dynamic payload) {
+    final records = <String, Map<String, dynamic>>{
+      'new': {},
+      'old': {},
+    };
+
+    if (payload.type == 'INSERT' || payload.type == 'UPDATE') {
+      records['new'] = convertChangeData(payload['columns'], payload['record']);
+    }
+
+    if (payload.type == 'UPDATE' || payload.type == 'DELETE') {
+      records['old'] =
+          convertChangeData(payload['columns'], payload['old_record']);
+    }
+
+    return records;
   }
 }
