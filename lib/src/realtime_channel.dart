@@ -42,7 +42,7 @@ class RealtimeChannel {
   final Duration _timeout;
   ChannelStates _state = ChannelStates.closed;
   bool joinedOnce = false;
-  late Push _joinPush;
+  late Push joinPush;
   late RetryTimer _rejoinTimer;
   List<Push> _pushBuffer = [];
   late RealtimePresence presence;
@@ -60,7 +60,7 @@ class RealtimeChannel {
       },
       ...(params['configs'] ?? {}),
     };
-    _joinPush = Push(
+    joinPush = Push(
       this,
       ChannelEvents.join,
       params,
@@ -68,7 +68,7 @@ class RealtimeChannel {
     );
     _rejoinTimer =
         RetryTimer(() => rejoinUntilConnected(), socket.reconnectAfterMs);
-    _joinPush.receive('ok', (_) {
+    joinPush.receive('ok', (_) {
       _state = ChannelStates.joined;
       _rejoinTimer.reset();
       for (final pushEvent in _pushBuffer) {
@@ -93,11 +93,11 @@ class RealtimeChannel {
       _rejoinTimer.scheduleTimeout();
     });
 
-    _joinPush.receive('timeout', (_) {
+    joinPush.receive('timeout', (_) {
       if (!isJoining) {
         return;
       }
-      socket.log('channel', 'timeout $topic', _joinPush.timeout);
+      socket.log('channel', 'timeout $topic', joinPush.timeout);
       _state = ChannelStates.errored;
       _rejoinTimer.scheduleTimeout();
     });
@@ -151,7 +151,7 @@ class RealtimeChannel {
       joinedOnce = true;
       rejoin(timeout ?? _timeout);
 
-      _joinPush.receive('ok', (response) {
+      joinPush.receive('ok', (response) {
         final serverPostgresFilters = response['postgres_changes'];
         if (socket.accessToken != null) socket.setAuth(socket.accessToken);
 
@@ -302,9 +302,7 @@ class RealtimeChannel {
     final Push push = this.push(ChannelEvents.fromName(payload['type']),
         payload, opts['timeout'] ?? _timeout);
 
-    if (push.rateLimited != null) {
-      completer.complete('rate limited');
-    }
+    completer.complete('rate limited');
 
     if (payload['type'] == 'broadcast' &&
         !params['configs']?['broadcast']?['ack']) {
@@ -318,7 +316,7 @@ class RealtimeChannel {
   }
 
   void updateJoinPayload(Map<String, dynamic> payload) {
-    _joinPush.updatePayload(payload);
+    joinPush.updatePayload(payload);
   }
 
   /// Leaves the channel
@@ -338,7 +336,7 @@ class RealtimeChannel {
     }
 
     // Destroy joinPush to avoid connection timeouts during unscription phase
-    _joinPush.destroy();
+    joinPush.destroy();
 
     final completer = Completer<String>();
 
@@ -376,7 +374,7 @@ class RealtimeChannel {
     return this.topic == topic;
   }
 
-  String get joinRef => _joinPush.ref;
+  String get joinRef => joinPush.ref;
 
   void rejoin([Duration? timeout]) {
     if (isLeaving) {
@@ -384,7 +382,7 @@ class RealtimeChannel {
     }
     socket.leaveOpenTopic(topic);
     _state = ChannelStates.joining;
-    _joinPush.resend(timeout ?? _timeout);
+    joinPush.resend(timeout ?? _timeout);
   }
 
   void trigger(String type, [dynamic payload, String? ref]) {

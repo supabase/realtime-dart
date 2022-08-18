@@ -1,4 +1,5 @@
 import 'package:realtime_client/realtime_client.dart';
+import 'package:realtime_client/src/constants.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -40,6 +41,14 @@ void main() {
       expect(channel.isJoining, true);
     });
 
+    test('sets joinedOnce to true', () {
+      expect(channel.joinedOnce, isFalse);
+
+      channel.subscribe();
+
+      expect(channel.joinedOnce, isTrue);
+    });
+
     test('throws if attempting to join multiple times', () {
       channel.subscribe();
 
@@ -48,9 +57,13 @@ void main() {
 
     test('can set timeout on joinPush', () {
       const newTimeout = Duration(milliseconds: 2000);
-      final joinPush = channel.subscribe(timeout: newTimeout);
+      final joinPush = channel.joinPush;
 
-      expect(joinPush.timeout, const Duration(milliseconds: 2000));
+      expect(joinPush.timeout, Constants.defaultTimeout);
+
+      channel.subscribe(() {}, newTimeout);
+
+      expect(joinPush.timeout, newTimeout);
     });
   });
 
@@ -62,11 +75,11 @@ void main() {
     });
 
     test("sets state to 'errored'", () {
-      expect(channel.isErrored, false);
+      expect(channel.isErrored, isFalse);
 
       channel.trigger('phx_error');
 
-      expect(channel.isErrored, true);
+      expect(channel.isErrored, isTrue);
     });
   });
 
@@ -78,11 +91,11 @@ void main() {
     });
 
     test("sets state to 'closed'", () {
-      expect(channel.isClosed, false);
+      expect(channel.isClosed, isFalse);
 
       channel.trigger('phx_close');
 
-      expect(channel.isClosed, true);
+      expect(channel.isClosed, isTrue);
     });
   });
 
@@ -159,21 +172,12 @@ void main() {
       var callbackEventCalled2 = 0;
       var callbackOtherCalled = 0;
 
-      channel.on(
-        'event',
-        {},
-        (dynamic payload, [String? ref]) => callBackEventCalled1++,
-      );
-      channel.on(
-        'event',
-        {},
-        (dynamic payload, [String? ref]) => callbackEventCalled2++,
-      );
-      channel.on(
-        'other',
-        {},
-        (dynamic payload, [String? ref]) => callbackOtherCalled++,
-      );
+      channel.on('event', {},
+          (dynamic payload, [String? ref]) => callBackEventCalled1++);
+      channel.on('event', {},
+          (dynamic payload, [String? ref]) => callbackEventCalled2++);
+      channel.on('other', {},
+          (dynamic payload, [String? ref]) => callbackOtherCalled++);
 
       channel.off('event', {});
 
@@ -186,19 +190,21 @@ void main() {
     });
   });
 
-  group('unsubscribe', () {
+  group('leave', () {
     setUp(() {
       socket = RealtimeClient('/socket');
 
       channel = socket.channel('topic', {'one': 'two'});
-      channel.subscribe().trigger('ok', {});
+      channel.subscribe();
+      channel.joinPush.trigger('ok', {});
     });
 
     test("closes channel on 'ok' from server", () {
       final anotherChannel = socket.channel('another', {'three': 'four'});
       expect(socket.channels.length, 2);
 
-      channel.unsubscribe().trigger('ok', {});
+      channel.unsubscribe();
+      channel.joinPush.trigger('ok', {});
 
       expect(socket.channels.length, 1);
       expect(socket.channels[0].topic, anotherChannel.topic);
@@ -207,7 +213,8 @@ void main() {
     test("sets state to closed on 'ok' event", () {
       expect(channel.isClosed, false);
 
-      channel.unsubscribe().trigger('ok', {});
+      channel.unsubscribe();
+      channel.joinPush.trigger('ok', {});
 
       expect(channel.isClosed, true);
     });
@@ -216,7 +223,8 @@ void main() {
       channel.on('*', {}, (payload, [ref]) {});
       expect(socket.channels.length, 1);
 
-      channel.unsubscribe().trigger('ok', {});
+      channel.unsubscribe();
+      channel.joinPush.trigger('ok', {});
 
       expect(socket.channels.length, 0);
     });
