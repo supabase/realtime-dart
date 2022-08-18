@@ -53,11 +53,10 @@ class RealtimeChannel {
 
   RealtimeChannel(this.topic, this.socket, {this.params = const {}})
       : _timeout = socket.timeout {
+    params = {...params};
     params['configs'] = {
-      ...{
-        'broadcast': {'ack': false, 'self': false},
-        'presence': {'key': ''},
-      },
+      'broadcast': {'ack': false, 'self': false},
+      'presence': {'key': ''},
       ...(params['configs'] ?? {}),
     };
     joinPush = Push(
@@ -102,13 +101,9 @@ class RealtimeChannel {
       _rejoinTimer.scheduleTimeout();
     });
 
-    on(
-      ChannelEvents.reply.eventName(),
-      {},
-      (payload, [ref]) {
-        trigger(replyEventName(ref), payload);
-      },
-    );
+    on(ChannelEvents.reply.eventName(), {}, (payload, [ref]) {
+      trigger(replyEventName(ref), payload);
+    });
 
     presence = RealtimePresence(this);
   }
@@ -151,56 +146,69 @@ class RealtimeChannel {
       joinedOnce = true;
       rejoin(timeout ?? _timeout);
 
-      joinPush.receive('ok', (response) {
-        final serverPostgresFilters = response['postgres_changes'];
-        if (socket.accessToken != null) socket.setAuth(socket.accessToken);
+      joinPush.receive(
+        'ok',
+        (response) {
+          final serverPostgresFilters = response['postgres_changes'];
+          if (socket.accessToken != null) socket.setAuth(socket.accessToken);
 
-        final clientPostgresBindings = _bindings['postgres_changes'];
-        final bindingsLen = clientPostgresBindings?.length ?? 0;
-        final newPostgresBindings = <Binding>[];
-
-        for (var i = 0; i < bindingsLen; i++) {
-          final clientPostgresBinding = clientPostgresBindings![i];
-
-          final event = clientPostgresBinding.filter['event'];
-          final schema = clientPostgresBinding.filter['schema'];
-          final table = clientPostgresBinding.filter['table'];
-          final filter = clientPostgresBinding.filter['filter'];
-          final serverPostgresFilter = serverPostgresFilters[i];
-
-          if (serverPostgresFilter &&
-              serverPostgresFilter['event'] == event &&
-              serverPostgresFilter['schema'] == schema &&
-              serverPostgresFilter['table'] == table &&
-              serverPostgresFilter['filter'] == filter) {
-            newPostgresBindings.add(
-                clientPostgresBinding.copyWith(id: serverPostgresFilter.id));
+          if (serverPostgresFilters == null) {
+            if (callback != null) callback('SUBSCRIBED');
+            return;
           } else {
-            unsubscribe();
-            if (callback != null) {
-              callback(
-                  'CHANNEL_ERROR',
-                  Exception(
-                      'mismatch between server and client bindings for postgres changes'));
+            final clientPostgresBindings = _bindings['postgres_changes'];
+            final bindingsLen = clientPostgresBindings?.length ?? 0;
+            final newPostgresBindings = <Binding>[];
+
+            for (var i = 0; i < bindingsLen; i++) {
+              final clientPostgresBinding = clientPostgresBindings![i];
+
+              final event = clientPostgresBinding.filter['event'];
+              final schema = clientPostgresBinding.filter['schema'];
+              final table = clientPostgresBinding.filter['table'];
+              final filter = clientPostgresBinding.filter['filter'];
+              final serverPostgresFilter = serverPostgresFilters[i];
+
+              if (serverPostgresFilter &&
+                  serverPostgresFilter['event'] == event &&
+                  serverPostgresFilter['schema'] == schema &&
+                  serverPostgresFilter['table'] == table &&
+                  serverPostgresFilter['filter'] == filter) {
+                newPostgresBindings.add(clientPostgresBinding.copyWith(
+                  id: serverPostgresFilter.id,
+                ));
+              } else {
+                unsubscribe();
+                if (callback != null) {
+                  callback(
+                    'CHANNEL_ERROR',
+                    Exception(
+                        'mismatch between server and client bindings for postgres changes'),
+                  );
+                }
+                return;
+              }
             }
+
+            _bindings['postgres_changes'] = newPostgresBindings;
+
+            if (callback != null) callback('SUBSCRIBED');
             return;
           }
-        }
-
-        _bindings['postgres_changes'] = newPostgresBindings;
-
-        if (callback != null) callback('SUBSCRIBED');
-        return;
-      }).receive('error', (response) {
+        },
+      ).receive('error', (error) {
         if (callback != null) {
           callback(
-              'CHANNEL_ERROR',
-              Exception(jsonEncode((response as Map<String, dynamic>).isNotEmpty
-                  ? (response).values.join(', ')
-                  : 'error')));
+            'CHANNEL_ERROR',
+            Exception(
+              jsonEncode((error as Map<String, dynamic>).isNotEmpty
+                  ? (error).values.join(', ')
+                  : 'error'),
+            ),
+          );
         }
         return;
-      }).receive('timeout', (response) {
+      }).receive('timeout', (_) {
         if (callback != null) callback('TIMED OUT');
         return;
       });
@@ -223,7 +231,9 @@ class RealtimeChannel {
     );
   }
 
-  Future<String> untrack([Map<String, dynamic> opts = const {}]) {
+  Future<String> untrack([
+    Map<String, dynamic> opts = const {},
+  ]) {
     return send(
       {
         'type': 'presence',
@@ -294,8 +304,10 @@ class RealtimeChannel {
   }
 
   /// Returns 'ok', 'timed out' or 'rate limited'
-  Future<String> send(Map<String, dynamic> payload,
-      [Map<String, dynamic> opts = const {}]) {
+  Future<String> send(
+    Map<String, dynamic> payload, [
+    Map<String, dynamic> opts = const {},
+  ]) {
     assert(payload['type'] != null, '`type` must be present in the `payload`');
     final completer = Completer<String>();
 
@@ -305,7 +317,8 @@ class RealtimeChannel {
     completer.complete('rate limited');
 
     if (payload['type'] == 'broadcast' &&
-        !params['configs']?['broadcast']?['ack']) {
+        (params['configs']?['broadcast']?['ack'] == null ||
+            params['configs']?['broadcast']?['ack'] == false)) {
       completer.complete('ok');
     }
 
@@ -404,49 +417,63 @@ class RealtimeChannel {
       throw 'channel onMessage callbacks must return the payload, modified or unmodified';
     }
 
-    _bindings[typeLower]?.where((bind) {
-      if (['broadcast', 'presence', 'postgres_changes'].contains(typeLower)) {
-        if (bind.id != null) {
-          final bindId = bind.id;
-          final bindEvent = bind.filter['event'];
+    if (['insert', 'update', 'delete'].contains(typeLower)) {
+      final bindings = _bindings['postgres_changes']?.where((bind) {
+        return (bind.filter['event'] == '*' ||
+            bind.filter['event']?.toLowerCase() == typeLower);
+      });
 
-          return (bindId != null &&
-              payload['ids']?.contains(bindId) &&
-              (bindEvent == '*' ||
-                  bindEvent?.toLowerCase() ==
-                      payload['data']?['type'].toLowerCase()));
+      for (final bind in (bindings ?? <Binding>[])) {
+        bind.callback(handledPayload, ref);
+      }
+    } else {
+      final bindings = _bindings[typeLower]?.where((bind) {
+        if (['broadcast', 'presence', 'postgres_changes'].contains(typeLower)) {
+          if (bind.id != null) {
+            final bindId = bind.id;
+            final bindEvent = bind.filter['event'];
+
+            return (bindId != null &&
+                payload['ids']?.contains(bindId) &&
+                (bindEvent == '*' ||
+                    bindEvent?.toLowerCase() ==
+                        payload['data']?['type'].toLowerCase()));
+          } else {
+            final bindEvent = bind.filter['event']?.toLowerCase();
+            return (bindEvent == '*' ||
+                bindEvent == payload?['event']?.toLowerCase());
+          }
         } else {
-          final bindEvent = bind.filter['event']?.toLowerCase();
-          return (bindEvent == '*' ||
-              bindEvent == payload?.event?.toLocaleLowerCase());
+          return bind.type.toLowerCase() == typeLower;
         }
-      } else {
-        return bind.type.toLowerCase() == typeLower;
+      });
+      for (final bind in (bindings ?? <Binding>[])) {
+        if (handledPayload is Map && handledPayload.keys.contains('ids')) {
+          final postgresChanges = handledPayload['data'];
+          final schema = postgresChanges['schema'];
+          final table = postgresChanges['table'];
+          final commitTimestamp = postgresChanges['commit_timestamp'];
+          final type = postgresChanges['type'];
+          final errors = postgresChanges['errors'];
+
+          final enrichedPayload = {
+            'schema': schema,
+            'table': table,
+            'commit_timestamp': commitTimestamp,
+            'eventType': type,
+            'new': {},
+            'old': {},
+            'errors': errors,
+          };
+          handledPayload = {
+            ...enrichedPayload,
+            ..._getPayloadRecords(postgresChanges),
+          };
+        }
+
+        bind.callback(handledPayload, ref);
       }
-    }).map((bind) {
-      if (handledPayload is Map && handledPayload.keys.contains('ids')) {
-        final postgresChanges = handledPayload['data'];
-        final schema = postgresChanges['schema'];
-        final table = postgresChanges['table'];
-        final commitTimestamp = postgresChanges['commit_timestamp'];
-        final type = postgresChanges['type'];
-        final errors = postgresChanges['errors'];
-        final enrichedPayload = {
-          'schema': schema,
-          'table': table,
-          'commit_timestamp': commitTimestamp,
-          'eventType': type,
-          'new': {},
-          'old': {},
-          'errors': errors,
-        };
-        handledPayload = {
-          ...enrichedPayload,
-          ..._getPayloadRecords(postgresChanges),
-        };
-      }
-      bind.callback(handledPayload, ref);
-    });
+    }
   }
 
   String replyEventName(String? ref) {
@@ -484,12 +511,17 @@ class RealtimeChannel {
     };
 
     if (payload.type == 'INSERT' || payload.type == 'UPDATE') {
-      records['new'] = convertChangeData(payload['columns'], payload['record']);
+      records['new'] = convertChangeData(
+        payload['columns'],
+        payload['record'],
+      );
     }
 
     if (payload.type == 'UPDATE' || payload.type == 'DELETE') {
-      records['old'] =
-          convertChangeData(payload['columns'], payload['old_record']);
+      records['old'] = convertChangeData(
+        payload['columns'],
+        payload['old_record'],
+      );
     }
 
     return records;

@@ -441,7 +441,7 @@ class RealtimeClient {
       topic: 'phoenix',
       event: ChannelEvents.heartbeat,
       payload: {},
-      ref: pendingHeartbeatRef,
+      ref: pendingHeartbeatRef!,
     ));
     setAuth(accessToken);
   }

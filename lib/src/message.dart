@@ -5,7 +5,7 @@ class Message {
   String topic;
   ChannelEvents event;
   dynamic payload;
-  String? ref;
+  String ref;
 
   Message({
     required this.topic,
@@ -14,6 +14,7 @@ class Message {
     required this.ref,
   });
 
+  /// Converting to JSON while removing functions
   Map<String, dynamic> toJson() {
     late final dynamic processedPayload;
     if (payload is Map) {
@@ -23,8 +24,8 @@ class Message {
         if (outerValue is Map) {
           for (final innerKey in outerValue.keys) {
             final innerValue = outerValue[innerKey];
+            processedPayload[outerKey] ??= {};
             if (innerValue is Binding) {
-              processedPayload[outerKey] ??= {};
               processedPayload[outerKey][innerKey] = <String, dynamic>{
                 'type': innerValue.type,
                 'filter': innerValue.filter,

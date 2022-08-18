@@ -24,7 +24,13 @@ void main() {
     test('sets defaults', () {
       expect(channel.isClosed, true);
       expect(channel.topic, 'topic');
-      expect(channel.params, {'one': 'two'});
+      expect(channel.params, {
+        'configs': {
+          'broadcast': {'ack': false, 'self': false},
+          'presence': {'key': ''}
+        },
+        'one': 'two'
+      });
       expect(channel.socket, socket);
     });
   });

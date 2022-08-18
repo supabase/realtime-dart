@@ -40,7 +40,7 @@ extension ChannelEventsName on ChannelEvents {
     } else if (this == ChannelEvents.postgresChanges) {
       return 'postgres_changes';
     }
-    return 'phx_${toString().split('.').last}';
+    return 'phx_$name';
   }
 }
 
