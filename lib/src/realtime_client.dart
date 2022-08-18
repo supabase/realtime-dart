@@ -29,7 +29,7 @@ class RealtimeClient {
   List<RealtimeChannel> channels = [];
   final String endPoint;
   final Map<String, String> headers;
-  final Map<String, String> params;
+  final Map<String, dynamic> params;
   final Duration timeout;
   final WebSocketTransport transport;
   int heartbeatIntervalMs = 30000;
@@ -249,7 +249,6 @@ class RealtimeClient {
     final event = message.event;
     void callback() {
       encode(message.toJson(), (result) {
-        // print('send message $result');
         conn?.sink.add(result);
       });
     }
