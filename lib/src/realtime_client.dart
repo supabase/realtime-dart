@@ -231,13 +231,13 @@ class RealtimeClient {
 
   RealtimeChannel channel(
     String topic, [
-    Map<String, dynamic> chanParams = const {},
+    Map<String, dynamic>? params,
   ]) {
     if (!isConnected) {
       connect();
     }
 
-    final chan = RealtimeChannel('realtime:$topic', this, params: chanParams);
+    final chan = RealtimeChannel('realtime:$topic', this, params: params);
     channels.add(chan);
     return chan;
   }
@@ -291,13 +291,13 @@ class RealtimeClient {
         payload,
       );
 
-      channels.where((channel) => channel.isMember(topic)).forEach(
-            (channel) => channel.trigger(
-              event,
-              payload,
-              ref,
-            ),
-          );
+      channels
+          .where((channel) => channel.isMember(topic))
+          .forEach((channel) => channel.trigger(
+                event,
+                payload,
+                ref,
+              ));
       for (final callback in stateChangeCallbacks['message']!) {
         callback(msg);
       }

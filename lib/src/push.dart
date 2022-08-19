@@ -127,9 +127,9 @@ class Push {
     String status,
     dynamic response,
   ) {
-    _recHooks
-        .where((h) => h.status == status)
-        .forEach((h) => h.callback(response));
+    _recHooks.where((h) => h.status == status).forEach((h) {
+      h.callback(response);
+    });
   }
 
   bool _hasReceived(String status) {

@@ -51,18 +51,19 @@ class RealtimeChannel {
   Map<String, dynamic> params;
   final RealtimeClient socket;
 
-  RealtimeChannel(this.topic, this.socket, {this.params = const {}})
-      : _timeout = socket.timeout {
-    params = {...params};
-    params['configs'] = {
+  RealtimeChannel(this.topic, this.socket, {Map<String, dynamic>? params})
+      : _timeout = socket.timeout,
+        params = (params ?? {}) {
+    this.params = {...this.params};
+    this.params['config'] = {
       'broadcast': {'ack': false, 'self': false},
       'presence': {'key': ''},
-      ...(params['configs'] ?? {}),
+      ...(this.params['config'] ?? {}),
     };
     joinPush = Push(
       this,
       ChannelEvents.join,
-      params,
+      this.params,
       _timeout,
     );
     _rejoinTimer =
@@ -119,8 +120,8 @@ class RealtimeChannel {
     if (joinedOnce == true) {
       throw "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance";
     } else {
-      final broadcast = params['configs']['broadcast'];
-      final presence = params['configs']['presence'];
+      final broadcast = params['config']['broadcast'];
+      final presence = params['config']['presence'];
 
       onError((e) {
         if (callback != null) callback('CHANNEL_ERROR', e);
@@ -130,7 +131,7 @@ class RealtimeChannel {
       });
 
       final accessTokenPayload = <String, String>{};
-      final configs = <String, dynamic>{
+      final config = <String, dynamic>{
         'broadcast': broadcast,
         'presence': presence,
         'postgres_changes':
@@ -141,7 +142,7 @@ class RealtimeChannel {
         accessTokenPayload['access_token'] = socket.accessToken!;
       }
 
-      updateJoinPayload({'configs': configs, ...accessTokenPayload});
+      updateJoinPayload({'config': config, ...accessTokenPayload});
 
       joinedOnce = true;
       rejoin(timeout ?? _timeout);
@@ -169,13 +170,13 @@ class RealtimeChannel {
               final filter = clientPostgresBinding.filter['filter'];
               final serverPostgresFilter = serverPostgresFilters[i];
 
-              if (serverPostgresFilter &&
+              if (serverPostgresFilter != null &&
                   serverPostgresFilter['event'] == event &&
                   serverPostgresFilter['schema'] == schema &&
                   serverPostgresFilter['table'] == table &&
                   serverPostgresFilter['filter'] == filter) {
                 newPostgresBindings.add(clientPostgresBinding.copyWith(
-                  id: serverPostgresFilter.id,
+                  id: serverPostgresFilter['id'],
                 ));
               } else {
                 unsubscribe();
@@ -215,7 +216,7 @@ class RealtimeChannel {
     }
   }
 
-  PresenceState presenceState() {
+  Map<String, dynamic> presenceState() {
     return presence.state;
   }
 
@@ -309,21 +310,34 @@ class RealtimeChannel {
     Map<String, dynamic> opts = const {},
   ]) {
     assert(payload['type'] != null, '`type` must be present in the `payload`');
+
     final completer = Completer<String>();
 
     final Push push = this.push(ChannelEvents.fromName(payload['type']),
         payload, opts['timeout'] ?? _timeout);
 
-    completer.complete('rate limited');
-
-    if (payload['type'] == 'broadcast' &&
-        (params['configs']?['broadcast']?['ack'] == null ||
-            params['configs']?['broadcast']?['ack'] == false)) {
-      completer.complete('ok');
+    if (push.rateLimited) {
+      completer.complete('rate limited');
     }
 
-    push.receive('ok', (_) => completer.complete('ok'));
-    push.receive('timeout', (_) => completer.complete('timed out'));
+    if (payload['type'] == 'broadcast' &&
+        (params['config']?['broadcast']?['ack'] == null ||
+            params['config']?['broadcast']?['ack'] == false)) {
+      if (!completer.isCompleted) {
+        completer.complete('ok');
+      }
+    }
+
+    push.receive('ok', (_) {
+      if (!completer.isCompleted) {
+        completer.complete('ok');
+      }
+    });
+    push.receive('timeout', (_) {
+      if (!completer.isCompleted) {
+        completer.complete('timed out');
+      }
+    });
 
     return completer.future;
   }
@@ -357,13 +371,19 @@ class RealtimeChannel {
 
     leavePush.receive('ok', (_) {
       onClose();
-      completer.complete('ok');
+      if (!completer.isCompleted) {
+        completer.complete('ok');
+      }
     }).receive('timeout', (_) {
-      onClose();
+      if (!completer.isCompleted) {
+        onClose();
+      }
       completer.complete('timed out');
     }).receive('error', (_) {
       onClose();
-      completer.complete('error');
+      if (!completer.isCompleted) {
+        completer.complete('error');
+      }
     });
 
     leavePush.send();
@@ -510,17 +530,17 @@ class RealtimeChannel {
       'old': {},
     };
 
-    if (payload.type == 'INSERT' || payload.type == 'UPDATE') {
+    if (payload?['type'] == 'INSERT' || payload?['type'] == 'UPDATE') {
       records['new'] = convertChangeData(
-        payload['columns'],
-        payload['record'],
+        List<Map<String, dynamic>>.from(payload['columns']),
+        Map<String, dynamic>.from(payload['record']),
       );
     }
 
-    if (payload.type == 'UPDATE' || payload.type == 'DELETE') {
+    if (payload?['type'] == 'UPDATE' || payload?['type'] == 'DELETE') {
       records['old'] = convertChangeData(
-        payload['columns'],
-        payload['old_record'],
+        List<Map<String, dynamic>>.from(payload['columns']),
+        Map<String, dynamic>.from(payload['old_record']),
       );
     }
 
