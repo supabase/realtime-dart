@@ -25,7 +25,7 @@ void main() {
       expect(channel.isClosed, true);
       expect(channel.topic, 'topic');
       expect(channel.params, {
-        'configs': {
+        'config': {
           'broadcast': {'ack': false, 'self': false},
           'presence': {'key': ''}
         },
@@ -128,8 +128,8 @@ void main() {
 
     test('sets up callback for event', () {
       var callbackCalled = 0;
-      channel.on(
-          'event', {}, (dynamic payload, [String? ref]) => callbackCalled++);
+      channel.on('event', ChannelFilter(),
+          (dynamic payload, [String? ref]) => callbackCalled++);
 
       channel.trigger('event', {});
       expect(callbackCalled, 1);
@@ -140,12 +140,12 @@ void main() {
       var otherEventCallbackCalled = 0;
       channel.on(
         'event',
-        {},
+        ChannelFilter(),
         (dynamic payload, [String? ref]) => eventCallbackCalled++,
       );
       channel.on(
         'otherEvent',
-        {},
+        ChannelFilter(),
         (dynamic payload, [String? ref]) => otherEventCallbackCalled++,
       );
 
@@ -156,7 +156,7 @@ void main() {
 
     test('"*" bind all events', () {
       var callbackCalled = 0;
-      channel.on('realtime', {'event': '*'},
+      channel.on('realtime', ChannelFilter(event: '*'),
           (dynamic payload, [String? ref]) => callbackCalled++);
 
       channel.trigger('realtime', {'event': 'INSERT'});
@@ -178,11 +178,11 @@ void main() {
       var callbackEventCalled2 = 0;
       var callbackOtherCalled = 0;
 
-      channel.on('event', {},
+      channel.on('event', ChannelFilter(),
           (dynamic payload, [String? ref]) => callBackEventCalled1++);
-      channel.on('event', {},
+      channel.on('event', ChannelFilter(),
           (dynamic payload, [String? ref]) => callbackEventCalled2++);
-      channel.on('other', {},
+      channel.on('other', ChannelFilter(),
           (dynamic payload, [String? ref]) => callbackOtherCalled++);
 
       channel.off('event', {});
@@ -226,7 +226,7 @@ void main() {
     });
 
     test("able to unsubscribe from * subscription", () {
-      channel.on('*', {}, (payload, [ref]) {});
+      channel.on('*', ChannelFilter(), (payload, [ref]) {});
       expect(socket.channels.length, 1);
 
       channel.unsubscribe();

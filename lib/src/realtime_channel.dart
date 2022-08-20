@@ -37,6 +37,46 @@ class Binding {
   }
 }
 
+class ChannelFilter {
+  final String? event;
+  final String? schema;
+  final String? table;
+  final String? filter;
+
+  ChannelFilter({
+    this.event,
+    this.schema,
+    this.table,
+    this.filter,
+  });
+
+  Map<String, String> toMap() {
+    return {
+      if (event != null) 'event': event!,
+      if (schema != null) 'schema': schema!,
+      if (table != null) 'table': table!,
+      if (filter != null) 'filter': filter!,
+    };
+  }
+}
+
+enum ChannelResponse {
+  ok,
+  timedOut,
+  rateLimited;
+
+  String get name {
+    switch (this) {
+      case ChannelResponse.ok:
+        return 'ok';
+      case ChannelResponse.timedOut:
+        return 'timed out';
+      case ChannelResponse.rateLimited:
+        return 'rate limited';
+    }
+  }
+}
+
 class RealtimeChannel {
   final Map<String, List<Binding>> _bindings = {};
   final Duration _timeout;
@@ -102,7 +142,7 @@ class RealtimeChannel {
       _rejoinTimer.scheduleTimeout();
     });
 
-    on(ChannelEvents.reply.eventName(), {}, (payload, [ref]) {
+    on(ChannelEvents.reply.eventName(), ChannelFilter(), (payload, [ref]) {
       trigger(replyEventName(ref), payload);
     });
 
@@ -220,7 +260,7 @@ class RealtimeChannel {
     return presence.state;
   }
 
-  Future<String> track(Map<String, dynamic> payload,
+  Future<ChannelResponse> track(Map<String, dynamic> payload,
       [Map<String, dynamic> opts = const {}]) {
     return send(
       {
@@ -232,7 +272,7 @@ class RealtimeChannel {
     );
   }
 
-  Future<String> untrack([
+  Future<ChannelResponse> untrack([
     Map<String, dynamic> opts = const {},
   ]) {
     return send(
@@ -246,20 +286,21 @@ class RealtimeChannel {
 
   /// Registers a callback that will be executed when the channel closes.
   void onClose(Function callback) {
-    on(ChannelEvents.close.eventName(), {}, (reason, [ref]) => callback());
+    on(ChannelEvents.close.eventName(), ChannelFilter(),
+        (reason, [ref]) => callback());
   }
 
   /// Registers a callback that will be executed when the channel encounteres an error.
   void onError(void Function(String?) callback) {
-    on(ChannelEvents.error.eventName(), {},
+    on(ChannelEvents.error.eventName(), ChannelFilter(),
         (reason, [ref]) => callback(reason.toString()));
   }
 
   RealtimeChannel on(
-      String type, Map<String, String> filter, BindingCallback callback) {
+      String type, ChannelFilter filter, BindingCallback callback) {
     final typeLower = type.toLowerCase();
 
-    final binding = Binding(typeLower, filter, callback);
+    final binding = Binding(typeLower, filter.toMap(), callback);
 
     if (_bindings[typeLower] != null) {
       _bindings[typeLower]!.add(binding);
@@ -304,38 +345,40 @@ class RealtimeChannel {
     return pushEvent;
   }
 
-  /// Returns 'ok', 'timed out' or 'rate limited'
-  Future<String> send(
+  Future<ChannelResponse> send(
     Map<String, dynamic> payload, [
     Map<String, dynamic> opts = const {},
   ]) {
     assert(payload['type'] != null, '`type` must be present in the `payload`');
 
-    final completer = Completer<String>();
+    final completer = Completer<ChannelResponse>();
 
-    final Push push = this.push(ChannelEvents.fromName(payload['type']),
-        payload, opts['timeout'] ?? _timeout);
+    final push = this.push(
+      ChannelEvents.fromName(payload['type']),
+      payload,
+      opts['timeout'] ?? _timeout,
+    );
 
     if (push.rateLimited) {
-      completer.complete('rate limited');
+      completer.complete(ChannelResponse.rateLimited);
     }
 
     if (payload['type'] == 'broadcast' &&
         (params['config']?['broadcast']?['ack'] == null ||
             params['config']?['broadcast']?['ack'] == false)) {
       if (!completer.isCompleted) {
-        completer.complete('ok');
+        completer.complete(ChannelResponse.ok);
       }
     }
 
     push.receive('ok', (_) {
       if (!completer.isCompleted) {
-        completer.complete('ok');
+        completer.complete(ChannelResponse.ok);
       }
     });
     push.receive('timeout', (_) {
       if (!completer.isCompleted) {
-        completer.complete('timed out');
+        completer.complete(ChannelResponse.timedOut);
       }
     });
 

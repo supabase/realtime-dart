@@ -283,7 +283,7 @@ void main() {
       expect(channel.socket, socket);
       expect(channel.topic, 'realtime:topic');
       expect(channel.params, {
-        'configs': {
+        'config': {
           'broadcast': {'ack': false, 'self': false},
           'presence': {'key': ''}
         },
