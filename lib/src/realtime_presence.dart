@@ -57,10 +57,10 @@ class Presence {
 typedef PresenceChooser<T> = T Function(String key, dynamic presence);
 
 typedef PresenceOnJoinCallback = void Function(
-    String? key, dynamic currentPresence, dynamic newPresence);
+    String? key, dynamic currentPresences, dynamic newPresences);
 
 typedef PresenceOnLeaveCallback = void Function(
-    String? key, dynamic currentPresence, dynamic newPresence);
+    String? key, dynamic currentPresences, dynamic newPresences);
 
 class PresenceOpts {
   final PresenceEvents events;
@@ -142,6 +142,28 @@ class RealtimePresence {
         onSync();
       }
     });
+
+    onJoin((key, currentPresences, newPresences) {
+      channel.trigger('presence', {
+        'event': 'join',
+        'key': key,
+        'currentPresences': currentPresences,
+        'newPresences': newPresences,
+      });
+    });
+
+    onLeave((key, currentPresences, leftPresences) => {
+          channel.trigger('presence', {
+            'event': 'leave',
+            'key': key,
+            'currentPresences': currentPresences,
+            'leftPresences': leftPresences,
+          })
+        });
+
+    onSync(() => {
+          channel.trigger('presence', {'event': 'sync'})
+        });
   }
 
   /// Used to sync the list of presences on the server with the
