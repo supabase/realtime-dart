@@ -39,6 +39,10 @@ extension ChannelEventsName on ChannelEvents {
       return 'access_token';
     } else if (this == ChannelEvents.postgresChanges) {
       return 'postgres_changes';
+    } else if (this == ChannelEvents.broadcast) {
+      return 'broadcast';
+    } else if (this == ChannelEvents.presence) {
+      return 'presence';
     }
     return 'phx_$name';
   }

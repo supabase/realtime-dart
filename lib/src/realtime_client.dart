@@ -122,7 +122,11 @@ class RealtimeClient {
       conn!.stream.timeout(Duration(milliseconds: longpollerTimeout));
       conn!.stream.listen(
         // incoming messages
-        (message) => onConnMessage(message as String),
+        (message) {
+          print('receiving message');
+          print(message);
+          onConnMessage(message as String);
+        },
         onError: _onConnError,
         onDone: () {
           // communication has been closed
@@ -249,6 +253,8 @@ class RealtimeClient {
     final event = message.event;
     void callback() {
       encode(message.toJson(), (result) {
+        print('sending data');
+        print(result);
         conn?.sink.add(result);
       });
     }

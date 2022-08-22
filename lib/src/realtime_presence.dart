@@ -31,15 +31,15 @@ class Presence {
 //   }
 // }
 
-class PresenceDiff {
-  final Map<String, dynamic> joins;
-  final Map<String, dynamic> leaves;
+// class PresenceDiff {
+//   final Map<String, dynamic> joins;
+//   final Map<String, dynamic> leaves;
 
-  PresenceDiff({
-    required this.joins,
-    required this.leaves,
-  });
-}
+//   PresenceDiff({
+//     required this.joins,
+//     required this.leaves,
+//   });
+// }
 
 // class RawPresenceState {
 //   final Map<String, Map<String, List<Map<String, dynamic>>>> presences;
@@ -47,12 +47,12 @@ class PresenceDiff {
 //   RawPresenceState(this.presences);
 // }
 
-class RawPresenceDiff {
-  final Map<String, dynamic> joins;
-  final Map<String, dynamic> leaves;
+// class RawPresenceDiff {
+//   final Map<String, dynamic> joins;
+//   final Map<String, dynamic> leaves;
 
-  RawPresenceDiff({required this.joins, required this.leaves});
-}
+//   RawPresenceDiff({required this.joins, required this.leaves});
+// }
 
 typedef PresenceChooser<T> = T Function(String key, dynamic presence);
 
@@ -77,7 +77,7 @@ class PresenceEvents {
 
 class RealtimePresence {
   var state = <String, dynamic>{};
-  List<RawPresenceDiff> pendingDiffs = [];
+  List<Map<String, dynamic>> pendingDiffs = [];
   String? joinRef;
   Map<String, dynamic> caller = {
     'onJoin': (_, __, ___) {},
@@ -197,8 +197,7 @@ class RealtimePresence {
       }
     });
 
-    return syncDiff(
-        state, PresenceDiff(joins: joins, leaves: leaves), onJoin, onLeave);
+    return syncDiff(state, {'joins': joins, 'leaves': leaves}, onJoin, onLeave);
   }
 
   /// Used to sync a diff of presence join and leave events from the
@@ -209,15 +208,12 @@ class RealtimePresence {
   /// device.
   static Map<String, dynamic> syncDiff(
     Map<String, dynamic> state,
-    dynamic diff, [
+    Map<String, dynamic> diff, [
     PresenceOnJoinCallback? onJoin,
     PresenceOnLeaveCallback? onLeave,
   ]) {
-    assert(diff is RawPresenceDiff || diff is PresenceDiff,
-        'diff must be RawPresenceDiff or RawPresenceDiff');
-
-    final joins = _transformState(diff.joins);
-    final leaves = _transformState(diff.leaves);
+    final joins = _transformState(diff['joins']);
+    final leaves = _transformState(diff['leaves']);
 
     onJoin ??= (_, __, ___) => {};
 
