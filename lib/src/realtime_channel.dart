@@ -77,6 +77,20 @@ enum ChannelResponse {
   }
 }
 
+enum ChannelType {
+  postgresChanges,
+  broadcast,
+  presence;
+
+  String toName() {
+    if (this == ChannelType.postgresChanges) {
+      return 'postgres_changes';
+    } else {
+      return name;
+    }
+  }
+}
+
 class RealtimeChannel {
   final Map<String, List<Binding>> _bindings = {};
   final Duration _timeout;
@@ -263,12 +277,12 @@ class RealtimeChannel {
   Future<ChannelResponse> track(Map<String, dynamic> payload,
       [Map<String, dynamic> opts = const {}]) {
     return send(
-      {
-        'type': 'presence',
+      type: ChannelType.presence,
+      payload: {
         'event': 'track',
         'payload': payload,
       },
-      {'timeout': opts['timeout'] ?? _timeout},
+      opts: {'timeout': opts['timeout'] ?? _timeout},
     );
   }
 
@@ -276,11 +290,11 @@ class RealtimeChannel {
     Map<String, dynamic> opts = const {},
   ]) {
     return send(
-      {
-        'type': 'presence',
+      type: ChannelType.presence,
+      payload: {
         'event': 'untrack',
       },
-      opts,
+      opts: opts,
     );
   }
 
@@ -345,13 +359,14 @@ class RealtimeChannel {
     return pushEvent;
   }
 
-  Future<ChannelResponse> send(
-    Map<String, dynamic> payload, [
+  Future<ChannelResponse> send({
+    required ChannelType type,
+    required Map<String, dynamic> payload,
     Map<String, dynamic> opts = const {},
-  ]) {
-    assert(payload['type'] != null, '`type` must be present in the `payload`');
-
+  }) {
     final completer = Completer<ChannelResponse>();
+
+    payload['type'] = type.toName();
 
     final push = this.push(
       ChannelEvents.fromName(payload['type']),
