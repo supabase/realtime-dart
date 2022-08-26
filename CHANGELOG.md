@@ -1,7 +1,7 @@
 ## [1.0.0-dev.1]
 
 - feat: add support for broadcast and presence
-- BREAKING: API change for listening to database realtime changes
+- BREAKING: `.on()` no longer takes a event string (e.g. INSERT, UPDATE or DELETE), but takes `RealtimeListenTypes` and a `ChannelFilter`
 ```dart
 final socket = RealtimeClient('ws://SUPABASE_API_ENDPOINT/realtime/v1');
 final channel = socket.channel('can_be_any_string');
