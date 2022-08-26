@@ -8,25 +8,25 @@ class MockIOWebSocketChannel extends Mock implements IOWebSocketChannel {}
 
 class MockWebSocketSink extends Mock implements WebSocketSink {}
 
-class MockChannel extends Mock implements RealtimeSubscription {}
+class MockChannel extends Mock implements RealtimeChannel {}
 
 class MockPush extends Mock implements Push {}
 
 class SocketWithMockedChannel extends RealtimeClient {
   SocketWithMockedChannel(String endPoint) : super(endPoint);
 
-  Map<String, RealtimeSubscription> mockedChannelLooker = {};
+  Map<String, RealtimeChannel> mockedChannelLooker = {};
 
   @override
-  RealtimeSubscription channel(
-    String topic, {
-    Map<String, dynamic> chanParams = const {},
-  }) {
+  RealtimeChannel channel(
+    String topic, [
+    Map<String, dynamic>? chanParams = const {},
+  ]) {
     if (mockedChannelLooker.keys.contains(topic)) {
       channels.add(mockedChannelLooker[topic]!);
       return mockedChannelLooker[topic]!;
     } else {
-      return super.channel(topic, chanParams: chanParams);
+      return super.channel(topic, chanParams);
     }
   }
 }

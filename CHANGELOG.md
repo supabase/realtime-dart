@@ -1,3 +1,12 @@
+## [1.0.0-dev.1]
+
+- feat: add support for broadcast and presence
+- BREAKING: API change for listening to realtime data
+```dart
+TODO: insert upgrade guide here
+```
+
+
 ## [0.1.15]
 
 - fix: use toString() instead of type cast error response

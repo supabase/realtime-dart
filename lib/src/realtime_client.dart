@@ -4,7 +4,7 @@ import 'dart:core';
 
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
-import 'package:realtime_client/src/realtime_subscription.dart';
+import 'package:realtime_client/src/realtime_channel.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 import 'package:realtime_client/src/websocket/websocket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -26,24 +26,21 @@ typedef RealtimeDecode = void Function(
 
 class RealtimeClient {
   String? accessToken;
-  List<RealtimeSubscription> channels = [];
+  List<RealtimeChannel> channels = [];
   final String endPoint;
   final Map<String, String> headers;
-  final Map<String, String> params;
+  final Map<String, dynamic> params;
   final Duration timeout;
   final WebSocketTransport transport;
   int heartbeatIntervalMs = 30000;
-  int longpollerTimeout = 20000;
   Timer? heartbeatTimer;
   String? pendingHeartbeatRef;
   int ref = 0;
   late RetryTimer reconnectTimer;
-
   void Function(String? kind, String? msg, dynamic data)? logger;
   late RealtimeEncode encode;
   late RealtimeDecode decode;
   late TimerCalculation reconnectAfterMs;
-
   WebSocketChannel? conn;
   List sendBuffer = [];
   Map<String, List<Function>> stateChangeCallbacks = {
@@ -52,7 +49,10 @@ class RealtimeClient {
     'error': [],
     'message': []
   };
+  int longpollerTimeout = 20000;
   SocketStates? connState;
+  int eventsPerSecondLimitMs = 100;
+  bool inThrottle = false;
 
   /// Initializes the Socket
   ///
@@ -70,21 +70,26 @@ class RealtimeClient {
   RealtimeClient(
     String endPoint, {
     WebSocketTransport? transport,
-    RealtimeEncode? encode,
-    RealtimeDecode? decode,
     this.timeout = Constants.defaultTimeout,
     this.heartbeatIntervalMs = 30000,
-    this.longpollerTimeout = 20000,
-    TimerCalculation? reconnectAfterMs,
     this.logger,
-    this.params = const {},
+    RealtimeEncode? encode,
+    RealtimeDecode? decode,
+    TimerCalculation? reconnectAfterMs,
     Map<String, String>? headers,
+    this.params = const {},
+    this.longpollerTimeout = 20000,
   })  : endPoint = '$endPoint/${Transports.websocket}',
         headers = {
           ...Constants.defaultHeaders,
           if (headers != null) ...headers,
         },
         transport = transport ?? createWebSocketClient {
+    final eventsPerSecond = params['eventsPerSecond'];
+    if (eventsPerSecond != null) {
+      eventsPerSecondLimitMs = (1000 / int.parse(eventsPerSecond)).floor();
+    }
+
     this.reconnectAfterMs =
         reconnectAfterMs ?? RetryTimer.createRetryFunction();
     this.encode = encode ??
@@ -94,8 +99,8 @@ class RealtimeClient {
         (String payload, Function(dynamic result) callback) =>
             callback(json.decode(payload));
     reconnectTimer = RetryTimer(
-      () async {
-        await disconnect();
+      () {
+        disconnect();
         connect();
       },
       this.reconnectAfterMs,
@@ -104,7 +109,9 @@ class RealtimeClient {
 
   /// Connects the socket.
   void connect() {
-    if (conn != null) return;
+    if (conn != null) {
+      return;
+    }
 
     try {
       connState = SocketStates.connecting;
@@ -132,17 +139,40 @@ class RealtimeClient {
   }
 
   /// Disconnects the socket with status [code] and [reason] for the disconnect
-  Future<void> disconnect({int? code, String? reason}) async {
+  void disconnect({int? code, String? reason}) {
     final conn = this.conn;
     if (conn != null) {
       connState = SocketStates.disconnected;
       if (code != null) {
-        await conn.sink.close(code, reason ?? '');
+        conn.sink.close(code, reason ?? '');
       } else {
-        await conn.sink.close();
+        conn.sink.close();
       }
       this.conn = null;
+
+      // remove open handles
+      if (heartbeatTimer != null) heartbeatTimer?.cancel();
+      reconnectTimer.reset();
     }
+  }
+
+  List<RealtimeChannel> getChannels() {
+    return channels;
+  }
+
+  Future<String> removeChannel(RealtimeChannel channel) async {
+    final status = await channel.unsubscribe();
+    if (channels.isEmpty) {
+      disconnect();
+    }
+    return status;
+  }
+
+  Future<List<String>> removeAllChannels() async {
+    final values =
+        await Future.wait(channels.map((channel) => channel.unsubscribe()));
+    disconnect();
+    return values;
   }
 
   /// Logs the message. Override `this.logger` for specialized logging.
@@ -195,61 +225,52 @@ class RealtimeClient {
   bool get isConnected => connectionState == 'open';
 
   /// Removes a subscription from the socket.
-  void remove(RealtimeSubscription channel) {
+  void remove(RealtimeChannel channel) {
     channels = channels.where((c) => c.joinRef != channel.joinRef).toList();
   }
 
-  RealtimeSubscription channel(
-    String topic, {
-    Map<String, dynamic> chanParams = const {},
-  }) {
-    if (chanParams.isNotEmpty && chanParams['selfBroadcast'] != null) {
-      params['self_broadcast'] = chanParams['selfBroadcast']!.toString();
+  RealtimeChannel channel(
+    String topic, [
+    Map<String, dynamic>? params,
+  ]) {
+    if (!isConnected) {
+      connect();
     }
 
-    // Check for vsndate. If so, use a [RealtimeChannel] instead
-    final chan = RealtimeSubscription(topic, this, params: chanParams);
+    final chan = RealtimeChannel('realtime:$topic', this, params: params);
     channels.add(chan);
     return chan;
   }
 
-  void push(Message message) {
+  /// Push out a message if the socket is connected.
+  ///
+  /// If the socket is not connected, the message gets enqueued within a local buffer, and sent out when a connection is next established.
+  String? push(Message message) {
+    final event = message.event;
     void callback() {
-      encode(message.toJson(), (result) {
-        // print('send message $result');
-        conn?.sink.add(result);
-      });
+      encode(message.toJson(), (result) => conn?.sink.add(result));
     }
 
-    log(
-      'push',
-      '${message.topic} ${message.event} (${message.ref})',
-      message.payload,
-    );
+    log('push', '${message.topic} ${message.event} (${message.ref})',
+        message.payload);
 
     if (isConnected) {
-      callback();
+      if ([
+        ChannelEvents.broadcast,
+        ChannelEvents.presence,
+        ChannelEvents.postgresChanges
+      ].contains(event)) {
+        final isThrottled = _throttle(callback)();
+        if (isThrottled) {
+          return 'rate limited';
+        }
+      } else {
+        callback();
+      }
     } else {
       sendBuffer.add(callback);
     }
-  }
-
-  /// Returns the URL of the websocket.
-  String get endPointURL {
-    final params = Map<String, String>.from(this.params);
-    params['vsn'] = Constants.vsn;
-    return _appendParams(endPoint, params);
-  }
-
-  /// Return the next message ref, accounting for overflows
-  String makeRef() {
-    final int newRef = ref + 1;
-    if (newRef < 0) {
-      ref = 0;
-    } else {
-      ref = newRef;
-    }
-    return ref.toString();
+    return null;
   }
 
   void onConnMessage(String rawMessage) {
@@ -268,42 +289,35 @@ class RealtimeClient {
         payload,
       );
 
-      channels.where((channel) => channel.isMember(topic)).forEach(
-            (channel) => channel.trigger(
-              event,
-              payload: payload,
-              ref: ref,
-            ),
-          );
+      channels
+          .where((channel) => channel.isMember(topic))
+          .forEach((channel) => channel.trigger(
+                event,
+                payload,
+                ref,
+              ));
       for (final callback in stateChangeCallbacks['message']!) {
         callback(msg);
       }
     });
   }
 
-  void sendHeartbeat() {
-    if (!isConnected) return;
+  /// Returns the URL of the websocket.
+  String get endPointURL {
+    final params = Map<String, String>.from(this.params);
+    params['vsn'] = Constants.vsn;
+    return _appendParams(endPoint, params);
+  }
 
-    if (pendingHeartbeatRef != null) {
-      pendingHeartbeatRef = null;
-      log(
-        'transport',
-        'heartbeat timeout. Attempting to re-establish connection',
-      );
-      conn?.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
-      return;
+  /// Return the next message ref, accounting for overflows
+  String makeRef() {
+    final int newRef = ref + 1;
+    if (newRef < 0) {
+      ref = 0;
+    } else {
+      ref = newRef;
     }
-
-    pendingHeartbeatRef = makeRef();
-    push(
-      Message(
-        topic: 'phoenix',
-        event: ChannelEvents.heartbeat,
-        payload: {},
-        ref: pendingHeartbeatRef,
-      ),
-    );
-    setAuth(accessToken);
+    return ref.toString();
   }
 
   /// Sets the JWT access token used for channel subscription authorization and Realtime RLS.
@@ -385,7 +399,9 @@ class RealtimeClient {
   }
 
   String _appendParams(String url, Map<String, String> params) {
-    if (params.keys.isEmpty) return url;
+    if (params.keys.isEmpty) {
+      return url;
+    }
 
     var endpoint = Uri.parse(url);
     final searchParams = Map<String, dynamic>.from(endpoint.queryParameters);
@@ -402,5 +418,41 @@ class RealtimeClient {
       }
       sendBuffer = [];
     }
+  }
+
+  void sendHeartbeat() {
+    if (!isConnected) {
+      return;
+    }
+    if (pendingHeartbeatRef != null) {
+      pendingHeartbeatRef = null;
+      log(
+        'transport',
+        'heartbeat timeout. Attempting to re-establish connection',
+      );
+      conn?.sink.close(Constants.wsCloseNormal, 'heartbeat timeout');
+      return;
+    }
+    pendingHeartbeatRef = makeRef();
+    push(Message(
+      topic: 'phoenix',
+      event: ChannelEvents.heartbeat,
+      payload: {},
+      ref: pendingHeartbeatRef!,
+    ));
+    setAuth(accessToken);
+  }
+
+  bool Function() _throttle(Function callback, [int? eventsPerSecondLimit]) {
+    return () {
+      if (inThrottle) return true;
+      callback();
+      inThrottle = true;
+      Timer(
+          Duration(
+              milliseconds: eventsPerSecondLimit ?? eventsPerSecondLimitMs),
+          () => inThrottle = false);
+      return false;
+    };
   }
 }
