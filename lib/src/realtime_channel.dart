@@ -77,13 +77,13 @@ enum ChannelResponse {
   }
 }
 
-enum ChannelType {
+enum RealtimeListenTypes {
   postgresChanges,
   broadcast,
   presence;
 
-  String toName() {
-    if (this == ChannelType.postgresChanges) {
+  String toType() {
+    if (this == RealtimeListenTypes.postgresChanges) {
       return 'postgres_changes';
     } else {
       return name;
@@ -156,7 +156,8 @@ class RealtimeChannel {
       _rejoinTimer.scheduleTimeout();
     });
 
-    on(ChannelEvents.reply.eventName(), ChannelFilter(), (payload, [ref]) {
+    onEvents(ChannelEvents.reply.eventName(), ChannelFilter(), (payload,
+        [ref]) {
       trigger(replyEventName(ref), payload);
     });
 
@@ -277,7 +278,7 @@ class RealtimeChannel {
   Future<ChannelResponse> track(Map<String, dynamic> payload,
       [Map<String, dynamic> opts = const {}]) {
     return send(
-      type: ChannelType.presence,
+      type: RealtimeListenTypes.presence,
       payload: {
         'event': 'track',
         'payload': payload,
@@ -290,7 +291,7 @@ class RealtimeChannel {
     Map<String, dynamic> opts = const {},
   ]) {
     return send(
-      type: ChannelType.presence,
+      type: RealtimeListenTypes.presence,
       payload: {
         'event': 'untrack',
       },
@@ -300,17 +301,25 @@ class RealtimeChannel {
 
   /// Registers a callback that will be executed when the channel closes.
   void onClose(Function callback) {
-    on(ChannelEvents.close.eventName(), ChannelFilter(),
+    onEvents(ChannelEvents.close.eventName(), ChannelFilter(),
         (reason, [ref]) => callback());
   }
 
   /// Registers a callback that will be executed when the channel encounteres an error.
   void onError(void Function(String?) callback) {
-    on(ChannelEvents.error.eventName(), ChannelFilter(),
+    onEvents(ChannelEvents.error.eventName(), ChannelFilter(),
         (reason, [ref]) => callback(reason.toString()));
   }
 
   RealtimeChannel on(
+    RealtimeListenTypes type,
+    ChannelFilter filter,
+    BindingCallback callback,
+  ) {
+    return onEvents(type.toType(), filter, callback);
+  }
+
+  RealtimeChannel onEvents(
       String type, ChannelFilter filter, BindingCallback callback) {
     final typeLower = type.toLowerCase();
 
@@ -360,13 +369,13 @@ class RealtimeChannel {
   }
 
   Future<ChannelResponse> send({
-    required ChannelType type,
+    required RealtimeListenTypes type,
     required Map<String, dynamic> payload,
     Map<String, dynamic> opts = const {},
   }) {
     final completer = Completer<ChannelResponse>();
 
-    payload['type'] = type.toName();
+    payload['type'] = type.toType();
 
     final push = this.push(
       ChannelEvents.fromName(payload['type']),

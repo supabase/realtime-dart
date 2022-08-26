@@ -87,7 +87,7 @@ class Push {
     _ref = _channel.socket.makeRef();
     _refEvent = _channel.replyEventName(ref);
 
-    _channel.on(_refEvent!, ChannelFilter(), (dynamic payload, [ref]) {
+    _channel.onEvents(_refEvent!, ChannelFilter(), (dynamic payload, [ref]) {
       _cancelRefEvent();
       _cancelTimeout();
       _receivedResp = payload;

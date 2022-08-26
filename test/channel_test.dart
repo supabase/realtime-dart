@@ -128,7 +128,7 @@ void main() {
 
     test('sets up callback for event', () {
       var callbackCalled = 0;
-      channel.on('event', ChannelFilter(),
+      channel.onEvents('event', ChannelFilter(),
           (dynamic payload, [String? ref]) => callbackCalled++);
 
       channel.trigger('event', {});
@@ -138,12 +138,12 @@ void main() {
     test('other event callbacks are ignored', () {
       var eventCallbackCalled = 0;
       var otherEventCallbackCalled = 0;
-      channel.on(
+      channel.onEvents(
         'event',
         ChannelFilter(),
         (dynamic payload, [String? ref]) => eventCallbackCalled++,
       );
-      channel.on(
+      channel.onEvents(
         'otherEvent',
         ChannelFilter(),
         (dynamic payload, [String? ref]) => otherEventCallbackCalled++,
@@ -156,7 +156,7 @@ void main() {
 
     test('"*" bind all events', () {
       var callbackCalled = 0;
-      channel.on('realtime', ChannelFilter(event: '*'),
+      channel.onEvents('realtime', ChannelFilter(event: '*'),
           (dynamic payload, [String? ref]) => callbackCalled++);
 
       channel.trigger('realtime', {'event': 'INSERT'});
@@ -178,11 +178,11 @@ void main() {
       var callbackEventCalled2 = 0;
       var callbackOtherCalled = 0;
 
-      channel.on('event', ChannelFilter(),
+      channel.onEvents('event', ChannelFilter(),
           (dynamic payload, [String? ref]) => callBackEventCalled1++);
-      channel.on('event', ChannelFilter(),
+      channel.onEvents('event', ChannelFilter(),
           (dynamic payload, [String? ref]) => callbackEventCalled2++);
-      channel.on('other', ChannelFilter(),
+      channel.onEvents('other', ChannelFilter(),
           (dynamic payload, [String? ref]) => callbackOtherCalled++);
 
       channel.off('event', {});
@@ -226,7 +226,7 @@ void main() {
     });
 
     test("able to unsubscribe from * subscription", () {
-      channel.on('*', ChannelFilter(), (payload, [ref]) {});
+      channel.onEvents('*', ChannelFilter(), (payload, [ref]) {});
       expect(socket.channels.length, 1);
 
       channel.unsubscribe();

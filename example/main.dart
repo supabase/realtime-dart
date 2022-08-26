@@ -10,10 +10,10 @@ Future<void> main() async {
   );
 
   final channel = socket.channel('realtime:public');
-  channel.on('DELETE', (payload, {ref}) {
+  channel.onEvents('DELETE', (payload, {ref}) {
     print('channel delete payload: $payload');
   });
-  channel.on('INSERT', (payload, {ref}) {
+  channel.onEvents('INSERT', (payload, {ref}) {
     print('channel insert payload: $payload');
   });
 
