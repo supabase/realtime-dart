@@ -3,7 +3,7 @@
 - feat: add support for broadcast and presence
 - BREAKING: API change for listening to database realtime changes
 ```dart
-final socket = RealtimeClient('');
+final socket = RealtimeClient('ws://SUPABASE_API_ENDPOINT/realtime/v1');
 final channel = socket.channel('can_be_any_string');
 
 // listen to insert events on public.messages table
@@ -48,7 +48,6 @@ channel.subscribe((status) async {
   }
 });
 ```
-
 
 ## [0.1.15]
 
