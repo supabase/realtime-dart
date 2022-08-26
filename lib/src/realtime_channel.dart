@@ -370,12 +370,16 @@ class RealtimeChannel {
 
   Future<ChannelResponse> send({
     required RealtimeListenTypes type,
+    String? event,
     required Map<String, dynamic> payload,
     Map<String, dynamic> opts = const {},
   }) {
     final completer = Completer<ChannelResponse>();
 
     payload['type'] = type.toType();
+    if (event != null) {
+      payload['event'] = event;
+    }
 
     final push = this.push(
       ChannelEvents.fromName(payload['type']),
