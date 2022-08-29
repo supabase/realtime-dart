@@ -91,6 +91,37 @@ enum RealtimeListenTypes {
   }
 }
 
+class ChannelParams {
+  /// [ack] option instructs server to acknowlege that broadcast message was received
+  final bool ack;
+
+  /// [self] option enables client to receive message it broadcasted
+  final bool self;
+
+  /// [key] option is used to track presence payload across clients
+  final String key;
+
+  const ChannelParams({
+    this.ack = false,
+    this.self = false,
+    this.key = '',
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'config': {
+        'broadcast': {
+          'ack': ack,
+          'self': self,
+        },
+        'presence': {
+          'key': key,
+        },
+      }
+    };
+  }
+}
+
 class RealtimeChannel {
   final Map<String, List<Binding>> _bindings = {};
   final Duration _timeout;
@@ -105,15 +136,10 @@ class RealtimeChannel {
   Map<String, dynamic> params;
   final RealtimeClient socket;
 
-  RealtimeChannel(this.topic, this.socket, {Map<String, dynamic>? params})
+  RealtimeChannel(this.topic, this.socket,
+      {ChannelParams params = const ChannelParams()})
       : _timeout = socket.timeout,
-        params = (params ?? {}) {
-    this.params = {...this.params};
-    this.params['config'] = {
-      'broadcast': {'ack': false, 'self': false},
-      'presence': {'key': ''},
-      ...(this.params['config'] ?? {}),
-    };
+        params = params.toMap() {
     joinPush = Push(
       this,
       ChannelEvents.join,
@@ -171,7 +197,8 @@ class RealtimeChannel {
     }
   }
 
-  void subscribe([Function? callback, Duration? timeout]) {
+  void subscribe(
+      [void Function(String, [Object?])? callback, Duration? timeout]) {
     if (joinedOnce == true) {
       throw "tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance";
     } else {

@@ -231,7 +231,7 @@ class RealtimeClient {
 
   RealtimeChannel channel(
     String topic, [
-    Map<String, dynamic>? params,
+    ChannelParams params = const ChannelParams(),
   ]) {
     if (!isConnected) {
       connect();

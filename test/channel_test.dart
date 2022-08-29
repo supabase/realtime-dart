@@ -67,7 +67,7 @@ void main() {
 
       expect(joinPush.timeout, Constants.defaultTimeout);
 
-      channel.subscribe(() {}, newTimeout);
+      channel.subscribe((_, [__]) {}, newTimeout);
 
       expect(joinPush.timeout, newTimeout);
     });
