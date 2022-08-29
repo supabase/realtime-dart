@@ -264,7 +264,7 @@ void main() {
 
   group('channel', () {
     const tTopic = 'topic';
-    const tParams = {'one': 'two'};
+    const tParams = ChannelParams();
     late RealtimeClient socket;
     setUp(() {
       socket = RealtimeClient(socketEndpoint);
@@ -286,8 +286,7 @@ void main() {
         'config': {
           'broadcast': {'ack': false, 'self': false},
           'presence': {'key': ''}
-        },
-        'one': 'two'
+        }
       });
     });
 

@@ -23,7 +23,7 @@ Future<void> main() async {
 
   // on connect and subscribe
   socket.connect();
-  channel.subscribe((a) => print('SUBSCRIBED'));
+  channel.subscribe((a, [_]) => print('SUBSCRIBED'));
 
   // delay 20s to receive events from server
   await Future.delayed(const Duration(seconds: 20));

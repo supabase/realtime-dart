@@ -18,7 +18,7 @@ void main() {
   group('constructor', () {
     setUp(() {
       socket = RealtimeClient('', timeout: const Duration(milliseconds: 1234));
-      channel = RealtimeChannel('topic', socket, params: {'one': 'two'});
+      channel = RealtimeChannel('topic', socket, params: ChannelParams());
     });
 
     test('sets defaults', () {
@@ -28,8 +28,7 @@ void main() {
         'config': {
           'broadcast': {'ack': false, 'self': false},
           'presence': {'key': ''}
-        },
-        'one': 'two'
+        }
       });
       expect(channel.socket, socket);
     });
@@ -38,7 +37,7 @@ void main() {
   group('join', () {
     setUp(() {
       socket = RealtimeClient('wss://example.com/socket');
-      channel = socket.channel('topic', {'one': 'two'});
+      channel = socket.channel('topic');
     });
 
     test('sets state to joining', () {
@@ -76,7 +75,7 @@ void main() {
   group('onError', () {
     setUp(() {
       socket = RealtimeClient('/socket');
-      channel = socket.channel('topic', {'one': 'two'});
+      channel = socket.channel('topic');
       channel.subscribe();
     });
 
@@ -92,7 +91,7 @@ void main() {
   group('onClose', () {
     setUp(() {
       socket = RealtimeClient('/socket');
-      channel = socket.channel('topic', {'one': 'two'});
+      channel = socket.channel('topic');
       channel.subscribe();
     });
 
@@ -109,7 +108,7 @@ void main() {
     setUp(() {
       socket = RealtimeClient('/socket');
 
-      channel = socket.channel('topic', {'one': 'two'});
+      channel = socket.channel('topic');
     });
 
     test('returns payload by default', () {
@@ -170,7 +169,7 @@ void main() {
     setUp(() {
       socket = RealtimeClient('/socket');
 
-      channel = socket.channel('topic', {'one': 'two'});
+      channel = socket.channel('topic');
     });
 
     test('removes all callbacks for event', () {
@@ -200,13 +199,13 @@ void main() {
     setUp(() {
       socket = RealtimeClient('/socket');
 
-      channel = socket.channel('topic', {'one': 'two'});
+      channel = socket.channel('topic');
       channel.subscribe();
       channel.joinPush.trigger('ok', {});
     });
 
     test("closes channel on 'ok' from server", () {
-      final anotherChannel = socket.channel('another', {'three': 'four'});
+      final anotherChannel = socket.channel('another');
       expect(socket.channels.length, 2);
 
       channel.unsubscribe();
