@@ -264,7 +264,7 @@ void main() {
 
   group('channel', () {
     const tTopic = 'topic';
-    const tParams = ChannelParams();
+    const tParams = RealtimeChannelConfig();
     late RealtimeClient socket;
     setUp(() {
       socket = RealtimeClient(socketEndpoint);

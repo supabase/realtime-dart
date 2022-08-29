@@ -18,7 +18,8 @@ void main() {
   group('constructor', () {
     setUp(() {
       socket = RealtimeClient('', timeout: const Duration(milliseconds: 1234));
-      channel = RealtimeChannel('topic', socket, params: ChannelParams());
+      channel =
+          RealtimeChannel('topic', socket, params: RealtimeChannelConfig());
     });
 
     test('sets defaults', () {

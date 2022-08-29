@@ -91,7 +91,7 @@ enum RealtimeListenTypes {
   }
 }
 
-class ChannelParams {
+class RealtimeChannelConfig {
   /// [ack] option instructs server to acknowlege that broadcast message was received
   final bool ack;
 
@@ -101,7 +101,7 @@ class ChannelParams {
   /// [key] option is used to track presence payload across clients
   final String key;
 
-  const ChannelParams({
+  const RealtimeChannelConfig({
     this.ack = false,
     this.self = false,
     this.key = '',
@@ -137,7 +137,7 @@ class RealtimeChannel {
   final RealtimeClient socket;
 
   RealtimeChannel(this.topic, this.socket,
-      {ChannelParams params = const ChannelParams()})
+      {RealtimeChannelConfig params = const RealtimeChannelConfig()})
       : _timeout = socket.timeout,
         params = params.toMap() {
     joinPush = Push(
