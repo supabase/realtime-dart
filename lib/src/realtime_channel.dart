@@ -258,7 +258,7 @@ class RealtimeChannel {
                   serverPostgresFilter['table'] == table &&
                   serverPostgresFilter['filter'] == filter) {
                 newPostgresBindings.add(clientPostgresBinding.copyWith(
-                  id: serverPostgresFilter['id'],
+                  id: serverPostgresFilter['id']?.toString(),
                 ));
               } else {
                 unsubscribe();
@@ -545,27 +545,29 @@ class RealtimeChannel {
         bind.callback(handledPayload, ref);
       }
     } else {
-      final bindings = _bindings[typeLower]?.where((bind) {
+      final bindings = (_bindings[typeLower] ?? []).where((bind) {
         if (['broadcast', 'presence', 'postgres_changes'].contains(typeLower)) {
-          if (bind.id != null) {
-            final bindId = bind.id;
+          final bindId = bind.id;
+          if (bindId != null) {
             final bindEvent = bind.filter['event'];
 
             return (bindId != null &&
-                (payload['ids'] as List?)?.contains(bindId) == true &&
+                (payload['ids'] as List?)?.contains(int.parse(bindId)) ==
+                    true &&
                 (bindEvent == '*' ||
                     bindEvent?.toLowerCase() ==
-                        payload['data']?['type'].toLowerCase()));
+                        (payload['data']?['type'] as String?)?.toLowerCase()));
           } else {
             final bindEvent = bind.filter['event']?.toLowerCase();
             return (bindEvent == '*' ||
-                bindEvent == payload?['event']?.toLowerCase());
+                bindEvent == (payload?['event'] as String?)?.toLowerCase());
           }
         } else {
           return bind.type.toLowerCase() == typeLower;
         }
       });
-      for (final bind in (bindings ?? <Binding>[])) {
+      print(bindings);
+      for (final bind in bindings) {
         if (handledPayload is Map && handledPayload.keys.contains('ids')) {
           final postgresChanges = handledPayload['data'];
           final schema = postgresChanges['schema'];
@@ -628,7 +630,7 @@ class RealtimeChannel {
       'old': {},
     };
 
-    if (payload?['type'] == 'INSERT' || payload?['type'] == 'UPDATE') {
+    if (payload['type'] == 'INSERT' || payload['type'] == 'UPDATE') {
       records['new'] = convertChangeData(
         List<Map<String, dynamic>>.from(payload['columns']),
         Map<String, dynamic>.from(payload['record']),

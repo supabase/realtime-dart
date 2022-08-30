@@ -279,15 +279,13 @@ class RealtimePresence {
   ///  }
   /// })
   static Map<String, dynamic> _transformState(Map<String, dynamic> state) {
-    // assert(state is PresenceState || state is RawPresenceState,
-    //     'state must be a PresenceState or RawPresenceState');
-
     final Map<String, List<Presence>> newStateMap = {};
 
     for (final key in state.keys) {
       final presences = state[key]!;
 
-      if (presences.keys.contains('metas')) {
+      // if (presences.keys.contains('metas')) {
+      if (presences is Map) {
         newStateMap[key] =
             (presences['metas'] as List).map<Presence>((presence) {
           presence['presence_ref'] = presence['phx_ref'] as String;
@@ -298,6 +296,7 @@ class RealtimePresence {
           return Presence(presence);
         }).toList();
       } else {
+        // presences is List<Presence>
         newStateMap[key] =
             (presences as List).map((map) => Presence(map)).toList();
       }
