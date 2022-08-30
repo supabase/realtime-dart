@@ -551,8 +551,7 @@ class RealtimeChannel {
           if (bindId != null) {
             final bindEvent = bind.filter['event'];
 
-            return (bindId != null &&
-                (payload['ids'] as List?)?.contains(int.parse(bindId)) ==
+            return ((payload['ids'] as List?)?.contains(int.parse(bindId)) ==
                     true &&
                 (bindEvent == '*' ||
                     bindEvent?.toLowerCase() ==
@@ -566,7 +565,6 @@ class RealtimeChannel {
           return bind.type.toLowerCase() == typeLower;
         }
       });
-      print(bindings);
       for (final bind in bindings) {
         if (handledPayload is Map && handledPayload.keys.contains('ids')) {
           final postgresChanges = handledPayload['data'];
