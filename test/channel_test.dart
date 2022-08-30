@@ -129,7 +129,7 @@ void main() {
     test('sets up callback for event', () {
       var callbackCalled = 0;
       channel.onEvents('event', ChannelFilter(),
-          (dynamic payload, [String? ref]) => callbackCalled++);
+          (dynamic payload, [dynamic ref]) => callbackCalled++);
 
       channel.trigger('event', {});
       expect(callbackCalled, 1);
@@ -141,12 +141,12 @@ void main() {
       channel.onEvents(
         'event',
         ChannelFilter(),
-        (dynamic payload, [String? ref]) => eventCallbackCalled++,
+        (dynamic payload, [dynamic ref]) => eventCallbackCalled++,
       );
       channel.onEvents(
         'otherEvent',
         ChannelFilter(),
-        (dynamic payload, [String? ref]) => otherEventCallbackCalled++,
+        (dynamic payload, [dynamic ref]) => otherEventCallbackCalled++,
       );
 
       channel.trigger('event', {});
@@ -157,7 +157,7 @@ void main() {
     test('"*" bind all events', () {
       var callbackCalled = 0;
       channel.onEvents('realtime', ChannelFilter(event: '*'),
-          (dynamic payload, [String? ref]) => callbackCalled++);
+          (dynamic payload, [dynamic ref]) => callbackCalled++);
 
       channel.trigger('realtime', {'event': 'INSERT'});
       channel.trigger('realtime', {'event': 'UPDATE'});
@@ -179,11 +179,11 @@ void main() {
       var callbackOtherCalled = 0;
 
       channel.onEvents('event', ChannelFilter(),
-          (dynamic payload, [String? ref]) => callBackEventCalled1++);
+          (dynamic payload, [dynamic ref]) => callBackEventCalled1++);
       channel.onEvents('event', ChannelFilter(),
-          (dynamic payload, [String? ref]) => callbackEventCalled2++);
+          (dynamic payload, [dynamic ref]) => callbackEventCalled2++);
       channel.onEvents('other', ChannelFilter(),
-          (dynamic payload, [String? ref]) => callbackOtherCalled++);
+          (dynamic payload, [dynamic ref]) => callbackOtherCalled++);
 
       channel.off('event', {});
 

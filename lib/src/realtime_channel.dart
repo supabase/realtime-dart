@@ -7,7 +7,7 @@ import 'package:realtime_client/src/push.dart';
 import 'package:realtime_client/src/realtime_presence.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 
-typedef BindingCallback = void Function(dynamic payload, [String? ref]);
+typedef BindingCallback = void Function(dynamic payload, [dynamic ref]);
 
 class Binding {
   String type;
@@ -552,7 +552,7 @@ class RealtimeChannel {
             final bindEvent = bind.filter['event'];
 
             return (bindId != null &&
-                payload['ids']?.contains(bindId) &&
+                (payload['ids'] as List?)?.contains(bindId) == true &&
                 (bindEvent == '*' ||
                     bindEvent?.toLowerCase() ==
                         payload['data']?['type'].toLowerCase()));
