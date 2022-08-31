@@ -34,7 +34,7 @@ class PresenceEvents {
   final String state;
   final String diff;
 
-  PresenceEvents({required this.state, required this.diff});
+  const PresenceEvents({required this.state, required this.diff});
 }
 
 class RealtimePresence {
