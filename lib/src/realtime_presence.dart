@@ -27,7 +27,7 @@ typedef PresenceOnLeaveCallback = void Function(
 class PresenceOpts {
   final PresenceEvents events;
 
-  PresenceOpts({required this.events});
+  const PresenceOpts({required this.events});
 }
 
 class PresenceEvents {
