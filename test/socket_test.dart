@@ -140,6 +140,11 @@ void main() {
     setUp(() {
       socket = RealtimeClient('ws://localhost:${mockServer.port}');
     });
+
+    tearDown(() {
+      socket.disconnect();
+    });
+
     test('establishes websocket connection with endpoint', () {
       socket.connect();
 
@@ -201,9 +206,14 @@ void main() {
     setUp(() {
       socket = RealtimeClient('ws://localhost:${mockServer.port}');
     });
+
+    tearDown(() {
+      socket.disconnect();
+    });
+
     test('removes existing connection', () async {
       socket.connect();
-      await socket.disconnect();
+      socket.disconnect();
 
       expect(socket.conn, null);
     });
@@ -211,7 +221,7 @@ void main() {
     test('calls callback', () async {
       int closes = 0;
       socket.connect();
-      await socket.disconnect();
+      socket.disconnect();
       closes += 1;
 
       expect(closes, 1);
@@ -254,21 +264,30 @@ void main() {
 
   group('channel', () {
     const tTopic = 'topic';
-    const tParams = {'one': 'two'};
+    const tParams = RealtimeChannelConfig();
     late RealtimeClient socket;
     setUp(() {
       socket = RealtimeClient(socketEndpoint);
     });
 
+    tearDown(() {
+      socket.disconnect();
+    });
+
     test('returns channel with given topic and params', () {
       final channel = socket.channel(
         tTopic,
-        chanParams: tParams,
+        tParams,
       );
 
       expect(channel.socket, socket);
-      expect(channel.topic, tTopic);
-      expect(channel.params, tParams);
+      expect(channel.topic, 'realtime:topic');
+      expect(channel.params, {
+        'config': {
+          'broadcast': {'ack': false, 'self': false},
+          'presence': {'key': ''}
+        }
+      });
     });
 
     test('adds channel to sockets channels list', () {
@@ -276,7 +295,7 @@ void main() {
 
       final channel = socket.channel(
         tTopic,
-        chanParams: tParams,
+        tParams,
       );
 
       expect(socket.channels.length, 1);
@@ -298,7 +317,7 @@ void main() {
       const tTopic2 = 'topic-2';
 
       final mockedSocket = SocketWithMockedChannel(socketEndpoint);
-      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeSubscription>{
+      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeChannel>{
         tTopic1: mockedChannel1,
         tTopic2: mockedChannel2,
       });
@@ -381,6 +400,10 @@ void main() {
       socket = RealtimeClient(socketEndpoint);
     });
 
+    tearDown(() {
+      socket.disconnect();
+    });
+
     test('returns next message ref', () {
       expect(socket.ref, 0);
       expect(socket.makeRef(), '1');
@@ -393,6 +416,48 @@ void main() {
       socket.ref = int64MaxValue;
       expect(socket.makeRef(), '0');
       expect(socket.ref, 0);
+    });
+  });
+
+  group('setAuth', () {
+    final updateJoinPayload = {'user_token': 'token123'};
+    final pushPayload = {'access_token': 'token123'};
+
+    test(
+        "sets access token, updates channels' join payload, and pushes token to channels",
+        () {
+      final mockedChannel1 = MockChannel();
+      when(() => mockedChannel1.joinedOnce).thenReturn(true);
+      when(() => mockedChannel1.isJoined).thenReturn(true);
+      when(() => mockedChannel1.push(ChannelEvents.accessToken, pushPayload))
+          .thenReturn(MockPush());
+
+      final mockedChannel2 = MockChannel();
+      when(() => mockedChannel2.joinedOnce).thenReturn(true);
+      when(() => mockedChannel2.isJoined).thenReturn(true);
+      when(() => mockedChannel2.push(ChannelEvents.accessToken, pushPayload))
+          .thenReturn(MockPush());
+
+      const tTopic1 = 'topic-1';
+      const tTopic2 = 'topic-2';
+
+      final mockedSocket = SocketWithMockedChannel(socketEndpoint);
+      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeChannel>{
+        tTopic1: mockedChannel1,
+        tTopic2: mockedChannel2,
+      });
+
+      final channel1 = mockedSocket.channel(tTopic1);
+      final channel2 = mockedSocket.channel(tTopic2);
+
+      mockedSocket.setAuth('token123');
+
+      verify(() => channel1.updateJoinPayload(updateJoinPayload)).called(1);
+      verify(() => channel2.updateJoinPayload(updateJoinPayload)).called(1);
+      verify(() => channel1.push(ChannelEvents.accessToken, pushPayload))
+          .called(1);
+      verify(() => channel2.push(ChannelEvents.accessToken, pushPayload))
+          .called(1);
     });
   });
 
@@ -437,48 +502,6 @@ void main() {
 
       mockedSocket.sendHeartbeat();
       verifyNever(() => mockedSink.add(any()));
-    });
-  });
-
-  group('setAuth', () {
-    final updateJoinPayload = {'user_token': 'token123'};
-    final pushPayload = {'access_token': 'token123'};
-
-    test(
-        "sets access token, updates channels' join payload, and pushes token to channels",
-        () {
-      final mockedChannel1 = MockChannel();
-      when(() => mockedChannel1.joinedOnce).thenReturn(true);
-      when(() => mockedChannel1.isJoined).thenReturn(true);
-      when(() => mockedChannel1.push(ChannelEvents.accessToken, pushPayload))
-          .thenReturn(MockPush());
-
-      final mockedChannel2 = MockChannel();
-      when(() => mockedChannel2.joinedOnce).thenReturn(true);
-      when(() => mockedChannel2.isJoined).thenReturn(true);
-      when(() => mockedChannel2.push(ChannelEvents.accessToken, pushPayload))
-          .thenReturn(MockPush());
-
-      const tTopic1 = 'topic-1';
-      const tTopic2 = 'topic-2';
-
-      final mockedSocket = SocketWithMockedChannel(socketEndpoint);
-      mockedSocket.mockedChannelLooker.addAll(<String, RealtimeSubscription>{
-        tTopic1: mockedChannel1,
-        tTopic2: mockedChannel2,
-      });
-
-      final channel1 = mockedSocket.channel(tTopic1);
-      final channel2 = mockedSocket.channel(tTopic2);
-
-      mockedSocket.setAuth('token123');
-
-      verify(() => channel1.updateJoinPayload(updateJoinPayload)).called(1);
-      verify(() => channel2.updateJoinPayload(updateJoinPayload)).called(1);
-      verify(() => channel1.push(ChannelEvents.accessToken, pushPayload))
-          .called(1);
-      verify(() => channel2.push(ChannelEvents.accessToken, pushPayload))
-          .called(1);
     });
   });
 }

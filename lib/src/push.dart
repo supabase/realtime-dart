@@ -2,22 +2,24 @@ import 'dart:async';
 
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
-import 'package:realtime_client/src/realtime_subscription.dart';
+import 'package:realtime_client/src/realtime_channel.dart';
 
 typedef Callback = void Function(dynamic response);
 
 /// Push event obj
 class Push {
-  final RealtimeSubscription _channel;
-  final ChannelEvents _event;
-  String? _ref;
-  String? _refEvent;
-  final Map<String, dynamic> payload;
-  dynamic _receivedResp;
-  Duration _timeout;
-  Timer? _timeoutTimer;
-  final List<Hook> _recHooks = [];
   bool sent = false;
+  Timer? _timeoutTimer;
+  String _ref = '';
+  Map<String, dynamic>? _receivedResp;
+  final List<Hook> _recHooks = [];
+  String? _refEvent;
+  bool rateLimited = false;
+
+  final RealtimeChannel _channel;
+  final ChannelEvents _event;
+  late Map<String, dynamic> payload;
+  Duration _timeout;
 
   /// Initializes the Push
   ///
@@ -32,13 +34,13 @@ class Push {
     this._timeout = Constants.defaultTimeout,
   ]);
 
-  String? get ref => _ref;
+  String get ref => _ref;
 
   Duration get timeout => _timeout;
 
   void resend(Duration timeout) {
     _timeout = timeout;
-    cancelRefEvent();
+    _cancelRefEvent();
     _ref = '';
     _refEvent = null;
     _receivedResp = null;
@@ -47,11 +49,12 @@ class Push {
   }
 
   void send() {
-    if (_hasReceived('timeout')) return;
-
+    if (_hasReceived('timeout')) {
+      return;
+    }
     startTimeout();
     sent = true;
-    _channel.socket.push(
+    final status = _channel.socket.push(
       Message(
         topic: _channel.topic,
         event: _event,
@@ -59,10 +62,13 @@ class Push {
         ref: ref,
       ),
     );
+    if (status == 'rate limited') {
+      rateLimited = true;
+    }
   }
 
   void updatePayload(Map<String, dynamic> payload) {
-    this.payload.addAll(payload);
+    this.payload = {...this.payload, ...payload};
   }
 
   Push receive(String status, Callback callback) {
@@ -75,16 +81,17 @@ class Push {
   }
 
   void startTimeout() {
-    if (_timeoutTimer != null) return;
-
+    if (_timeoutTimer != null) {
+      return;
+    }
     _ref = _channel.socket.makeRef();
     _refEvent = _channel.replyEventName(ref);
 
-    _channel.on(_refEvent!, (dynamic payload, {ref}) {
-      cancelRefEvent();
-      cancelTimeout();
+    _channel.onEvents(_refEvent!, ChannelFilter(), (dynamic payload, [ref]) {
+      _cancelRefEvent();
+      _cancelTimeout();
       _receivedResp = payload;
-      matchReceive(payload['status'] as String, payload['response']);
+      _matchReceive(payload['status'] as String, payload['response']);
     });
 
     _timeoutTimer = Timer(timeout, () {
@@ -94,41 +101,41 @@ class Push {
 
   void trigger(String status, dynamic response) {
     if (_refEvent != null) {
-      _channel.trigger(
-        _refEvent!,
-        payload: {
-          'status': status,
-          'response': response,
-        },
-      );
+      _channel.trigger(_refEvent!, {'status': status, 'response': response});
     }
   }
 
   void destroy() {
-    cancelRefEvent();
-    cancelTimeout();
+    _cancelRefEvent();
+    _cancelTimeout();
   }
 
-  void cancelRefEvent() {
-    if (_refEvent == null) return;
-    _channel.off(_refEvent!);
+  void _cancelRefEvent() {
+    if (_refEvent == null) {
+      return;
+    }
+
+    _channel.off(_refEvent!, {});
   }
 
-  void cancelTimeout() {
+  void _cancelTimeout() {
     _timeoutTimer?.cancel();
     _timeoutTimer = null;
   }
 
-  void matchReceive(String status, dynamic response) {
-    _recHooks
-        .where((h) => h.status == status)
-        .forEach((h) => h.callback(response));
+  void _matchReceive(
+    String status,
+    dynamic response,
+  ) {
+    _recHooks.where((h) => h.status == status).forEach((h) {
+      h.callback(response);
+    });
   }
 
   bool _hasReceived(String status) {
     return _receivedResp != null &&
         _receivedResp is Map &&
-        _receivedResp['status'] == status;
+        _receivedResp?['status'] == status;
   }
 }
 

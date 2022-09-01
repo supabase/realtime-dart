@@ -1,3 +1,54 @@
+## [1.0.0-dev.1]
+
+- feat: add support for broadcast and presence
+- BREAKING: `.on()` no longer takes a event string (e.g. INSERT, UPDATE or DELETE), but takes `RealtimeListenTypes` and a `ChannelFilter`
+```dart
+final socket = RealtimeClient('ws://SUPABASE_API_ENDPOINT/realtime/v1');
+final channel = socket.channel('can_be_any_string');
+
+// listen to insert events on public.messages table
+channel.on(
+    RealtimeListenTypes.postgresChanges,
+    ChannelFilter(
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+    ), (payload, [ref]) {
+  print('database insert payload: $payload');
+});
+
+// listen to `location` broadcast events
+channel.on(
+    RealtimeListenTypes.broadcast,
+    ChannelFilter(
+      event: 'location',
+    ), (payload, [ref]) {
+  print(payload);
+});
+
+// send `location` broadcast events
+channel.send(
+  type: RealtimeListenTypes.broadcast,
+  event: 'location',
+  payload: {'lat': 1.3521, 'lng': 103.8198},
+);
+
+// listen to presence states
+channel.on(RealtimeListenTypes.presence, ChannelFilter(event: 'sync'),
+    (payload, [ref]) {
+  print(payload);
+  print(channel.presenceState());
+});
+
+// subscribe to the above changes
+channel.subscribe((status) async {
+  if (status == 'SUBSCRIBED') {
+    // if subscribed successfully, send presence event
+    final status = await channel.track({'user_id': myUserId});
+  }
+});
+```
+
 ## [0.1.15]
 
 - fix: use toString() instead of type cast error response

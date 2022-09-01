@@ -10,10 +10,12 @@ Future<void> main() async {
   );
 
   final channel = socket.channel('realtime:public');
-  channel.on('DELETE', (payload, {ref}) {
+  channel.on(RealtimeListenTypes.postgresChanges,
+      ChannelFilter(event: 'DELETE', schema: 'public'), (payload, [ref]) {
     print('channel delete payload: $payload');
   });
-  channel.on('INSERT', (payload, {ref}) {
+  channel.on(RealtimeListenTypes.postgresChanges,
+      ChannelFilter(event: 'INSERT', schema: 'public'), (payload, [ref]) {
     print('channel insert payload: $payload');
   });
 
@@ -21,7 +23,7 @@ Future<void> main() async {
 
   // on connect and subscribe
   socket.connect();
-  channel.subscribe().receive('ok', (_) => print('SUBSCRIBED'));
+  channel.subscribe((a, [_]) => print('SUBSCRIBED'));
 
   // delay 20s to receive events from server
   await Future.delayed(const Duration(seconds: 20));
