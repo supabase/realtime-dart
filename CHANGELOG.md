@@ -1,3 +1,7 @@
+## [1.0.0-dev.2]
+
+- fix: bug where presence sync of other clients causes exception
+
 ## [1.0.0-dev.1]
 
 - feat: add support for broadcast and presence
