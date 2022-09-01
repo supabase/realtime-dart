@@ -297,8 +297,7 @@ class RealtimePresence {
         }).toList();
       } else {
         // presences is List<Presence>
-        newStateMap[key] =
-            (presences as List).map((map) => Presence(map)).toList();
+        newStateMap[key] = presences;
       }
     }
     return newStateMap;
