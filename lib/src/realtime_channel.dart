@@ -542,6 +542,7 @@ class RealtimeChannel {
       });
 
       for (final bind in (bindings ?? <Binding>[])) {
+        handledPayload = _getEnrichedPayload(handledPayload);
         bind.callback(handledPayload, ref);
       }
     } else {
@@ -567,26 +568,7 @@ class RealtimeChannel {
       });
       for (final bind in bindings) {
         if (handledPayload is Map && handledPayload.keys.contains('ids')) {
-          final postgresChanges = handledPayload['data'];
-          final schema = postgresChanges['schema'];
-          final table = postgresChanges['table'];
-          final commitTimestamp = postgresChanges['commit_timestamp'];
-          final type = postgresChanges['type'];
-          final errors = postgresChanges['errors'];
-
-          final enrichedPayload = {
-            'schema': schema,
-            'table': table,
-            'commit_timestamp': commitTimestamp,
-            'eventType': type,
-            'new': {},
-            'old': {},
-            'errors': errors,
-          };
-          handledPayload = {
-            ...enrichedPayload,
-            ..._getPayloadRecords(postgresChanges),
-          };
+          handledPayload = _getEnrichedPayload(handledPayload);
         }
 
         bind.callback(handledPayload, ref);
@@ -620,6 +602,30 @@ class RealtimeChannel {
     }
 
     return true;
+  }
+
+  Map<String, dynamic> _getEnrichedPayload(dynamic payload) {
+    final postgresChanges = payload['data'];
+    final schema = postgresChanges['schema'];
+    final table = postgresChanges['table'];
+    final commitTimestamp = postgresChanges['commit_timestamp'];
+    final type = postgresChanges['type'];
+    final errors = postgresChanges['errors'];
+
+    final enrichedPayload = {
+      'schema': schema,
+      'table': table,
+      'commit_timestamp': commitTimestamp,
+      'eventType': type,
+      'new': {},
+      'old': {},
+      'errors': errors,
+    };
+
+    return {
+      ...enrichedPayload,
+      ..._getPayloadRecords(postgresChanges),
+    };
   }
 
   Map<String, Map<String, dynamic>> _getPayloadRecords(dynamic payload) {
