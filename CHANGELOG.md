@@ -1,3 +1,7 @@
+## [1.0.0-dev.3]
+
+- BREAKING: fix payload shape on old version of realtime server to match the new version
+
 ## [1.0.0-dev.2]
 
 - fix: bug where presence sync of other clients causes exception
