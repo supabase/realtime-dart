@@ -1,4 +1,4 @@
-import 'package:realtime_client/realtime_client.dart';
+import 'package:realtime_client/src/transformers.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -158,5 +158,80 @@ void main() {
       toArray([99, 999, 9999, 99999], 'int8'),
       equals([99, 999, 9999, 99999]),
     );
+  });
+
+  group('enrich payload', () {
+    test('can enrich single tenant realtime payload', () {
+      final enrichedPayload = getEnrichedPayload({
+        "columns": [
+          {"name": "id", "type": "int8"},
+          {"name": "created_at", "type": "timestamptz"},
+          {"name": "content", "type": "text"}
+        ],
+        "commit_timestamp": "2022-09-21T04:15:16.267254+00:00",
+        "errors": null,
+        "record": {
+          "content": "some content",
+          "created_at": "2022-09-21T04:15:13+00:00",
+          "id": 4
+        },
+        "schema": "public",
+        "table": "random",
+        "type": "INSERT"
+      });
+
+      final expectedMap = {
+        'schema': 'public',
+        'table': 'random',
+        'commit_timestamp': '2022-09-21T04:15:16.267254+00:00',
+        'eventType': 'INSERT',
+        'new': {
+          "content": "some content",
+          "created_at": "2022-09-21T04:15:13+00:00",
+          "id": 4
+        },
+        'old': {},
+        'errors': null,
+      };
+      expect(enrichedPayload, expectedMap);
+    });
+
+    test('can enrich multi tenant realtime payload', () {
+      final enrichedPayload = getEnrichedPayload({
+        "data": {
+          "columns": [
+            {"name": "id", "type": "int8"},
+            {"name": "created_at", "type": "timestamptz"},
+            {"name": "content", "type": "text"}
+          ],
+          "commit_timestamp": "2022-09-21T04:59:30Z",
+          "errors": null,
+          "record": {
+            "content": "some content",
+            "created_at": "2022-09-21T04:15:13+00:00",
+            "id": 4
+          },
+          "schema": "public",
+          "table": "random",
+          "type": "INSERT"
+        },
+        "ids": [48673474, 25993878, 77086988]
+      });
+
+      final expectedMap = {
+        'schema': 'public',
+        'table': 'random',
+        'commit_timestamp': '2022-09-21T04:59:30Z',
+        'eventType': 'INSERT',
+        'new': {
+          "content": "some content",
+          "created_at": "2022-09-21T04:15:13+00:00",
+          "id": 4
+        },
+        'old': {},
+        'errors': null,
+      };
+      expect(enrichedPayload, expectedMap);
+    });
   });
 }
