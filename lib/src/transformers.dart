@@ -286,7 +286,7 @@ String? toTimestampString(String? value) {
 }
 
 Map<String, dynamic> getEnrichedPayload(dynamic payload) {
-  final postgresChanges = payload['data'];
+  final postgresChanges = payload['data'] ?? payload;
   final schema = postgresChanges['schema'];
   final table = postgresChanges['table'];
   final commitTimestamp = postgresChanges['commit_timestamp'];
