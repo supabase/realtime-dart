@@ -285,7 +285,7 @@ String? toTimestampString(String? value) {
   return null;
 }
 
-Map<String, dynamic> getEnrichedPayload(dynamic payload) {
+Map<String, dynamic> getEnrichedPayload(Map<String, dynamic> payload) {
   final postgresChanges = payload['data'] ?? payload;
   final schema = postgresChanges['schema'];
   final table = postgresChanges['table'];
@@ -309,20 +309,21 @@ Map<String, dynamic> getEnrichedPayload(dynamic payload) {
   };
 }
 
-Map<String, Map<String, dynamic>> getPayloadRecords(dynamic payload) {
+Map<String, Map<String, dynamic>> getPayloadRecords(
+    Map<String, dynamic> payload) {
   final records = <String, Map<String, dynamic>>{
     'new': {},
     'old': {},
   };
 
-  if (payload?['type'] == 'INSERT' || payload?['type'] == 'UPDATE') {
+  if (payload['type'] == 'INSERT' || payload['type'] == 'UPDATE') {
     records['new'] = convertChangeData(
       List<Map<String, dynamic>>.from(payload['columns']),
       Map<String, dynamic>.from(payload['record']),
     );
   }
 
-  if (payload?['type'] == 'UPDATE' || payload?['type'] == 'DELETE') {
+  if (payload['type'] == 'UPDATE' || payload['type'] == 'DELETE') {
     records['old'] = convertChangeData(
       List<Map<String, dynamic>>.from(payload['columns']),
       Map<String, dynamic>.from(payload['old_record']),

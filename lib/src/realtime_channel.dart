@@ -568,7 +568,8 @@ class RealtimeChannel {
         }
       });
       for (final bind in bindings) {
-        if (handledPayload is Map && handledPayload.keys.contains('ids')) {
+        if (handledPayload is Map<String, dynamic> &&
+            handledPayload.keys.contains('ids')) {
           handledPayload = getEnrichedPayload(handledPayload);
         }
 
