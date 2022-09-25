@@ -315,7 +315,7 @@ Map<String, Map<String, dynamic>> getPayloadRecords(dynamic payload) {
     'old': {},
   };
 
-  if (payload['type'] == 'INSERT' || payload['type'] == 'UPDATE') {
+  if (payload?['type'] == 'INSERT' || payload?['type'] == 'UPDATE') {
     records['new'] = convertChangeData(
       List<Map<String, dynamic>>.from(payload['columns']),
       Map<String, dynamic>.from(payload['record']),
