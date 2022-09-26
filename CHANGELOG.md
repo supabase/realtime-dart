@@ -1,3 +1,8 @@
+## [1.0.0-dev.4]
+
+- fix: bug where it throws exception when listening to postgres changes on old version of realtime server
+- chore: add mock tests for listening to postgres changes
+
 ## [1.0.0-dev.3]
 
 - BREAKING: fix payload shape on old version of realtime server to match the new version
