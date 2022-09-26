@@ -284,3 +284,51 @@ String? toTimestampString(String? value) {
   }
   return null;
 }
+
+Map<String, dynamic> getEnrichedPayload(Map<String, dynamic> payload) {
+  final postgresChanges = payload['data'] ?? payload;
+  final schema = postgresChanges['schema'];
+  final table = postgresChanges['table'];
+  final commitTimestamp = postgresChanges['commit_timestamp'];
+  final type = postgresChanges['type'];
+  final errors = postgresChanges['errors'];
+
+  final enrichedPayload = {
+    'schema': schema,
+    'table': table,
+    'commit_timestamp': commitTimestamp,
+    'eventType': type,
+    'new': {},
+    'old': {},
+    'errors': errors,
+  };
+
+  return {
+    ...enrichedPayload,
+    ...getPayloadRecords(postgresChanges),
+  };
+}
+
+Map<String, Map<String, dynamic>> getPayloadRecords(
+    Map<String, dynamic> payload) {
+  final records = <String, Map<String, dynamic>>{
+    'new': {},
+    'old': {},
+  };
+
+  if (payload['type'] == 'INSERT' || payload['type'] == 'UPDATE') {
+    records['new'] = convertChangeData(
+      List<Map<String, dynamic>>.from(payload['columns']),
+      Map<String, dynamic>.from(payload['record']),
+    );
+  }
+
+  if (payload['type'] == 'UPDATE' || payload['type'] == 'DELETE') {
+    records['old'] = convertChangeData(
+      List<Map<String, dynamic>>.from(payload['columns']),
+      Map<String, dynamic>.from(payload['old_record']),
+    );
+  }
+
+  return records;
+}

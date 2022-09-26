@@ -6,6 +6,7 @@ import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/push.dart';
 import 'package:realtime_client/src/realtime_presence.dart';
 import 'package:realtime_client/src/retry_timer.dart';
+import 'package:realtime_client/src/transformers.dart';
 
 typedef BindingCallback = void Function(dynamic payload, [dynamic ref]);
 
@@ -542,7 +543,7 @@ class RealtimeChannel {
       });
 
       for (final bind in (bindings ?? <Binding>[])) {
-        handledPayload = _getEnrichedPayload(handledPayload);
+        handledPayload = getEnrichedPayload(handledPayload);
         bind.callback(handledPayload, ref);
       }
     } else {
@@ -567,8 +568,9 @@ class RealtimeChannel {
         }
       });
       for (final bind in bindings) {
-        if (handledPayload is Map && handledPayload.keys.contains('ids')) {
-          handledPayload = _getEnrichedPayload(handledPayload);
+        if (handledPayload is Map<String, dynamic> &&
+            handledPayload.keys.contains('ids')) {
+          handledPayload = getEnrichedPayload(handledPayload);
         }
 
         bind.callback(handledPayload, ref);
@@ -602,52 +604,5 @@ class RealtimeChannel {
     }
 
     return true;
-  }
-
-  Map<String, dynamic> _getEnrichedPayload(dynamic payload) {
-    final postgresChanges = payload['data'];
-    final schema = postgresChanges['schema'];
-    final table = postgresChanges['table'];
-    final commitTimestamp = postgresChanges['commit_timestamp'];
-    final type = postgresChanges['type'];
-    final errors = postgresChanges['errors'];
-
-    final enrichedPayload = {
-      'schema': schema,
-      'table': table,
-      'commit_timestamp': commitTimestamp,
-      'eventType': type,
-      'new': {},
-      'old': {},
-      'errors': errors,
-    };
-
-    return {
-      ...enrichedPayload,
-      ..._getPayloadRecords(postgresChanges),
-    };
-  }
-
-  Map<String, Map<String, dynamic>> _getPayloadRecords(dynamic payload) {
-    final records = <String, Map<String, dynamic>>{
-      'new': {},
-      'old': {},
-    };
-
-    if (payload['type'] == 'INSERT' || payload['type'] == 'UPDATE') {
-      records['new'] = convertChangeData(
-        List<Map<String, dynamic>>.from(payload['columns']),
-        Map<String, dynamic>.from(payload['record']),
-      );
-    }
-
-    if (payload?['type'] == 'UPDATE' || payload?['type'] == 'DELETE') {
-      records['old'] = convertChangeData(
-        List<Map<String, dynamic>>.from(payload['columns']),
-        Map<String, dynamic>.from(payload['old_record']),
-      );
-    }
-
-    return records;
   }
 }
