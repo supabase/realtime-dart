@@ -1,3 +1,7 @@
+## [1.0.0-dev.5]
+
+- fix: sends null for access_token when not signed in [(#53)](https://github.com/supabase-community/realtime-dart/pull/53)
+
 ## [1.0.0-dev.4]
 
 - fix: bug where it throws exception when listening to postgres changes on old version of realtime server
