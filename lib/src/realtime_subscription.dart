@@ -115,7 +115,7 @@ class RealtimeSubscription {
 
   Push push(
     ChannelEvents event,
-    Map<String, String> payload, {
+    Map<String, String?> payload, {
     Duration? timeout,
   }) {
     if (!joinedOnce) {
