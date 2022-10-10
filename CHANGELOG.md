@@ -1,3 +1,7 @@
+## [0.1.15+1]
+
+- fix: allow null access token to be passed
+
 ## [0.1.15]
 
 - fix: use toString() instead of type cast error response
