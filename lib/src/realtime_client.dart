@@ -312,7 +312,7 @@ class RealtimeClient {
         channel.updateJoinPayload({'user_token': token});
       }
       if (channel.joinedOnce && channel.isJoined()) {
-        channel.push(ChannelEvents.accessToken, {'access_token': token ?? ''});
+        channel.push(ChannelEvents.accessToken, {'access_token': token});
       }
     }
   }
