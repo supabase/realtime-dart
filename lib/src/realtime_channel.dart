@@ -406,11 +406,10 @@ class RealtimeChannel {
     }
 
     final push = this.push(
-      channelEventsFromType(payload['type']),
+      ChannelEventsExtended.fromType(payload['type']),
       payload,
       opts['timeout'] ?? _timeout,
     );
-    print(push);
 
     if (push.rateLimited) {
       completer.complete(ChannelResponse.rateLimited);

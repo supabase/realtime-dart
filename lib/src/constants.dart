@@ -26,16 +26,16 @@ enum ChannelEvents {
   postgresChanges,
 }
 
-ChannelEvents channelEventsFromType(String type) {
-  for (ChannelEvents enumVariant in ChannelEvents.values) {
-    if (enumVariant.name == type || enumVariant.eventName() == type) {
-      return enumVariant;
+extension ChannelEventsExtended on ChannelEvents {
+  static ChannelEvents fromType(String type) {
+    for (ChannelEvents enumVariant in ChannelEvents.values) {
+      if (enumVariant.name == type || enumVariant.eventName() == type) {
+        return enumVariant;
+      }
     }
+    throw 'No type $type exists';
   }
-  throw 'No type $type exists';
-}
 
-extension ChannelEventsName on ChannelEvents {
   String eventName() {
     if (this == ChannelEvents.accessToken) {
       return 'access_token';
