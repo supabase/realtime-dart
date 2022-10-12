@@ -23,14 +23,16 @@ enum ChannelEvents {
   accessToken,
   broadcast,
   presence,
-  postgresChanges;
+  postgresChanges,
+}
 
-  static ChannelEvents fromName(String type) {
-    for (ChannelEvents enumVariant in ChannelEvents.values) {
-      if (enumVariant.name == type) return enumVariant;
+ChannelEvents channelEventsFromType(String type) {
+  for (ChannelEvents enumVariant in ChannelEvents.values) {
+    if (enumVariant.name == type || enumVariant.eventName() == type) {
+      return enumVariant;
     }
-    throw 'No type $type exists';
   }
+  throw 'No type $type exists';
 }
 
 extension ChannelEventsName on ChannelEvents {

@@ -61,11 +61,9 @@ class ChannelFilter {
   }
 }
 
-enum ChannelResponse {
-  ok,
-  timedOut,
-  rateLimited;
+enum ChannelResponse { ok, timedOut, rateLimited }
 
+extension Name on ChannelResponse {
   String get name {
     switch (this) {
       case ChannelResponse.ok:
@@ -78,11 +76,9 @@ enum ChannelResponse {
   }
 }
 
-enum RealtimeListenTypes {
-  postgresChanges,
-  broadcast,
-  presence;
+enum RealtimeListenTypes { postgresChanges, broadcast, presence }
 
+extension ToType on RealtimeListenTypes {
   String toType() {
     if (this == RealtimeListenTypes.postgresChanges) {
       return 'postgres_changes';
@@ -410,10 +406,11 @@ class RealtimeChannel {
     }
 
     final push = this.push(
-      ChannelEvents.fromName(payload['type']),
+      channelEventsFromType(payload['type']),
       payload,
       opts['timeout'] ?? _timeout,
     );
+    print(push);
 
     if (push.rateLimited) {
       completer.complete(ChannelResponse.rateLimited);
