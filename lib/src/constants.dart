@@ -36,6 +36,10 @@ extension ChannelEventsExtended on ChannelEvents {
     throw 'No type $type exists';
   }
 
+  String get name {
+    return toString().split('.').last;
+  }
+
   String eventName() {
     if (this == ChannelEvents.accessToken) {
       return 'access_token';
