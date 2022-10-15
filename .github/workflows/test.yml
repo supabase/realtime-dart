@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Test / OS ${{ matrix.os }} / SDK ${{ matrix.sdk }}
+    name: Test / SDK ${{ matrix.sdk }}
     strategy:
       fail-fast: false
       matrix:
