@@ -63,19 +63,6 @@ class ChannelFilter {
 
 enum ChannelResponse { ok, timedOut, rateLimited }
 
-extension Name on ChannelResponse {
-  String get name {
-    switch (this) {
-      case ChannelResponse.ok:
-        return 'ok';
-      case ChannelResponse.timedOut:
-        return 'timed out';
-      case ChannelResponse.rateLimited:
-        return 'rate limited';
-    }
-  }
-}
-
 enum RealtimeListenTypes { postgresChanges, broadcast, presence }
 
 extension ToType on RealtimeListenTypes {
