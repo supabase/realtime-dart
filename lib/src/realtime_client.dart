@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:collection/collection.dart';
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/message.dart';
 import 'package:realtime_client/src/realtime_channel.dart';
@@ -338,19 +339,12 @@ class RealtimeClient {
 
   /// Unsubscribe from channels with the specified topic.
   void leaveOpenTopic(String topic) {
-    try {
-      final dupChannel = channels.firstWhere(
-        (c) => c.topic == topic && (c.isJoined || c.isJoining),
-      );
-
+    final dupChannel = channels.firstWhereOrNull(
+      (c) => c.topic == topic && (c.isJoined || c.isJoining),
+    );
+    if (dupChannel != null) {
       log('transport', 'leaving duplicate topic "$topic"');
       dupChannel.unsubscribe();
-
-      // ignore: avoid_catching_errors
-    } on StateError {
-      // state error is thrown when the channel is not found, so it's safe to do
-      // nothing here
-      return;
     }
   }
 
