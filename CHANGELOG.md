@@ -1,11 +1,15 @@
+## [1.0.1]
+
+- fix: bug where leaving existing topic throws [#58](https://github.com/supabase/realtime-dart/pull/58)
+
 ## [1.0.0]
 
 - chore: v1.0.0 release 🚀
-- fix: set minimum Dart SDK to 2.14.0 [(#56)](https://github.com/supabase-community/realtime-dart/pull/56)
+- fix: set minimum Dart SDK to 2.14.0 [#56](https://github.com/supabase-community/realtime-dart/pull/56)
 
 ## [1.0.0-dev.5]
 
-- fix: sends null for access_token when not signed in [(#53)](https://github.com/supabase-community/realtime-dart/pull/53)
+- fix: sends null for access_token when not signed in [#53](https://github.com/supabase-community/realtime-dart/pull/53)
 
 ## [1.0.0-dev.4]
 
