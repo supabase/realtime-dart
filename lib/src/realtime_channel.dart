@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:realtime_client/realtime_client.dart';
 import 'package:realtime_client/src/constants.dart';
 import 'package:realtime_client/src/push.dart';
-import 'package:realtime_client/src/realtime_presence.dart';
 import 'package:realtime_client/src/retry_timer.dart';
 import 'package:realtime_client/src/transformers.dart';
 
