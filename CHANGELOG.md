@@ -1,3 +1,7 @@
+## [1.0.2]
+
+- fix: export realtime presence [#60](https://github.com/supabase/realtime-dart/pull/60)
+
 ## [1.0.1]
 
 - fix: bug where leaving existing topic throws [#58](https://github.com/supabase/realtime-dart/pull/58)
