@@ -10,7 +10,7 @@ import 'package:realtime_client/src/retry_timer.dart';
 import 'package:realtime_client/src/websocket/websocket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-typedef WebSocketTransport = FutureOr<WebSocketChannel> Function(
+typedef WebSocketTransport = WebSocketChannel Function(
   String url,
   Map<String, String> headers,
 );
@@ -109,14 +109,14 @@ class RealtimeClient {
   }
 
   /// Connects the socket.
-  void connect() async {
+  void connect() {
     if (conn != null) {
       return;
     }
 
     try {
       connState = SocketStates.connecting;
-      conn = await transport(endPointURL, headers);
+      conn = transport(endPointURL, headers);
       connState = SocketStates.open;
 
       _onConnOpen();
