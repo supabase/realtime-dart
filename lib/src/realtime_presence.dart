@@ -106,26 +106,30 @@ class RealtimePresence {
     });
 
     onJoin((key, currentPresences, newPresences) {
-      channel.trigger('presence', {
-        'event': 'join',
-        'key': key,
-        'currentPresences': currentPresences,
-        'newPresences': newPresences,
-      });
+      channel.trigger(
+        'presence',
+        {
+          'event': 'join',
+          'key': key,
+          'currentPresences': currentPresences,
+          'newPresences': newPresences,
+        },
+      );
     });
 
-    onLeave((key, currentPresences, leftPresences) => {
-          channel.trigger('presence', {
-            'event': 'leave',
-            'key': key,
-            'currentPresences': currentPresences,
-            'leftPresences': leftPresences,
-          })
-        });
+    onLeave((key, currentPresences, leftPresences) {
+      channel.trigger(
+        'presence',
+        {
+          'event': 'leave',
+          'key': key,
+          'currentPresences': currentPresences,
+          'leftPresences': leftPresences,
+        },
+      );
+    });
 
-    onSync(() => {
-          channel.trigger('presence', {'event': 'sync'})
-        });
+    onSync(() => channel.trigger('presence', {'event': 'sync'}));
   }
 
   /// Used to sync the list of presences on the server with the
