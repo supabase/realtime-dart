@@ -109,7 +109,7 @@ class RealtimeClient {
   }
 
   /// Connects the socket.
-  void connect() {
+  void connect() async {
     if (conn != null) {
       return;
     }
@@ -117,6 +117,10 @@ class RealtimeClient {
     try {
       connState = SocketStates.connecting;
       conn = transport(endPointURL, headers);
+
+      // handle connection errors
+      conn!.ready.catchError(_onConnError);
+
       connState = SocketStates.open;
 
       _onConnOpen();
@@ -379,6 +383,7 @@ class RealtimeClient {
   }
 
   void _onConnError(dynamic error) {
+    print("My error: $error");
     log('transport', error.toString());
     _triggerChanError();
     for (final callback in stateChangeCallbacks['error']!) {
