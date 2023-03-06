@@ -383,7 +383,6 @@ class RealtimeClient {
   }
 
   void _onConnError(dynamic error) {
-    print("My error: $error");
     log('transport', error.toString());
     _triggerChanError();
     for (final callback in stateChangeCallbacks['error']!) {
