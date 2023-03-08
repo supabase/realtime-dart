@@ -1,3 +1,7 @@
+## [1.0.3]
+
+- fix: catch `SocketException` [#62](https://github.com/supabase/realtime-dart/pull/62)
+
 ## [1.0.2]
 
 - fix: export realtime presence [#60](https://github.com/supabase/realtime-dart/pull/60)
