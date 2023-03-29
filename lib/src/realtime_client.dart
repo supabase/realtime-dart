@@ -29,7 +29,7 @@ class RealtimeClient {
   String? accessToken;
   List<RealtimeChannel> channels = [];
   final String endPoint;
-  final Map<String, String> headers;
+  final Map<String, String> _headers;
   final Map<String, dynamic> params;
   final Duration timeout;
   final WebSocketTransport transport;
@@ -54,6 +54,11 @@ class RealtimeClient {
   SocketStates? connState;
   int eventsPerSecondLimitMs = 100;
   bool inThrottle = false;
+
+  /// Getter for the headers
+  Map<String, String> get headers {
+    return _headers;
+  }
 
   /// Initializes the Socket
   ///
@@ -81,7 +86,7 @@ class RealtimeClient {
     this.params = const {},
     this.longpollerTimeout = 20000,
   })  : endPoint = '$endPoint/${Transports.websocket}',
-        headers = {
+        _headers = {
           ...Constants.defaultHeaders,
           if (headers != null) ...headers,
         },
