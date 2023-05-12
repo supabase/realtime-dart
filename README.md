@@ -1,7 +1,7 @@
 # `realtime-dart`
 
 > **Warning**
-> This repository has been moved [supabase-flutter repo](https://github.com/supabase/supabase-flutter/tree/main/packages/realtime_client).
+> This repository has been moved to the [supabase-flutter repo](https://github.com/supabase/supabase-flutter/tree/main/packages/realtime_client).
 
 Listens to changes in a PostgreSQL Database and via websockets.
 
