@@ -1,11 +1,11 @@
 # `realtime-dart`
 
+> **Warning**
+> This repository has been moved [supabase-flutter repo](https://github.com/supabase/supabase-flutter/tree/main/packages/realtime_client).
+
 Listens to changes in a PostgreSQL Database and via websockets.
 
 A dart client for Supabase [Realtime](https://github.com/supabase/realtime) server.
-
-[![pub package](https://img.shields.io/pub/v/realtime_client.svg)](https://pub.dev/packages/realtime_client)
-[![pub test](https://github.com/supabase/realtime-dart/workflows/Test/badge.svg)](https://github.com/supabase/realtime-dart/actions?query=workflow%3ATest)
 
 ## Usage
 
